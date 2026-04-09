@@ -137,20 +137,29 @@ export default function EstoquePage() {
         {filtrados.map(p => (
           <div key={p.id} className="bg-white rounded-xl shadow p-4 space-y-3">
             {/* Cabeçalho do card */}
-            <div className="flex items-start justify-between">
-              <div>
+            <div className="flex items-start gap-3">
+              {/* Foto principal */}
+              <div
+                className="w-14 h-14 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden flex items-center justify-center cursor-pointer"
+                onClick={() => { setVerFotos(p); setModalFotos(true); }}
+              >
+                {p.fotos && p.fotos.length > 0 ? (
+                  <img src={p.fotos[0]} alt={p.modelo} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-2xl text-gray-300">📱</span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
                 <p className="font-bold text-gray-800">
                   {p.modelo} <span className="text-gray-400 font-normal text-sm">{p.linha}</span>
                 </p>
                 <p className="text-sm text-gray-500">{p.gb} · {p.cor}</p>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
-                  p.status === 'EM_ESTOQUE' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
-                }`}>
-                  {p.status === 'EM_ESTOQUE' ? 'Estoque' : 'Vendido'}
-                </span>
-              </div>
+              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0 ${
+                p.status === 'EM_ESTOQUE' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+              }`}>
+                {p.status === 'EM_ESTOQUE' ? 'Estoque' : 'Vendido'}
+              </span>
             </div>
 
             {/* Info */}
@@ -250,6 +259,7 @@ export default function EstoquePage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
+                <th className="py-3 px-2 text-gray-500 font-medium w-12"></th>
                 <th className="text-left py-3 px-3 text-gray-500 font-medium">Cod.</th>
                 <th className="text-left py-3 px-3 text-gray-500 font-medium">Modelo</th>
                 <th className="text-left py-3 px-3 text-gray-500 font-medium">GB / Cor</th>
@@ -266,13 +276,25 @@ export default function EstoquePage() {
             <tbody>
               {filtrados.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="py-10 text-center text-gray-400">
+                  <td colSpan={12} className="py-10 text-center text-gray-400">
                     Nenhum produto encontrado.
                   </td>
                 </tr>
               )}
               {filtrados.map(p => (
                 <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
+                  <td className="py-2 px-2">
+                    <div
+                      className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center cursor-pointer"
+                      onClick={() => { setVerFotos(p); setModalFotos(true); }}
+                    >
+                      {p.fotos && p.fotos.length > 0 ? (
+                        <img src={p.fotos[0]} alt={p.modelo} className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-lg text-gray-300">📱</span>
+                      )}
+                    </div>
+                  </td>
                   <td className="py-2.5 px-3 text-gray-400 font-mono text-xs">{p.codigo}</td>
                   <td className="py-2.5 px-3 font-medium">
                     {p.modelo}
