@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Navbar from '@/components/Navbar';
+import AppShell from '@/components/AppShell';
+import AuthProvider from '@/components/AuthProvider';
 
 export const metadata: Metadata = {
   title: 'Gestão iPhones',
@@ -18,10 +19,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="min-h-screen flex flex-col">
-        <Navbar />
-        <main className="flex-1 container mx-auto px-4 py-4 md:py-6 max-w-7xl pb-20 md:pb-6">
-          {children}
-        </main>
+        <AuthProvider>
+          <AppShell>{children}</AppShell>
+        </AuthProvider>
       </body>
     </html>
   );

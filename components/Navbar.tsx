@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from './AuthProvider';
 
 const links = [
   { href: '/', label: 'Dashboard', icon: '📊' },
@@ -10,12 +11,20 @@ const links = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    router.push('/login');
+  };
+
   return (
     <>
       {/* Desktop: topo */}
       <nav className="hidden md:flex bg-gray-900 text-white px-6 py-4 items-center gap-8 shadow-lg">
         <span className="text-xl font-bold text-blue-400">Gestão iPhones</span>
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-1">
           {links.map(link => (
             <Link
               key={link.href}
@@ -30,11 +39,26 @@ export default function Navbar() {
             </Link>
           ))}
         </div>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-gray-400">{user?.nome}</span>
+          <button
+            onClick={handleLogout}
+            className="px-3 py-1.5 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
+          >
+            Sair
+          </button>
+        </div>
       </nav>
 
-      {/* Mobile: header simples */}
-      <header className="md:hidden bg-gray-900 text-white px-4 py-3 shadow-lg">
+      {/* Mobile: header */}
+      <header className="md:hidden bg-gray-900 text-white px-4 py-3 shadow-lg flex items-center justify-between">
         <span className="text-lg font-bold text-blue-400">Gestão iPhones</span>
+        <button
+          onClick={handleLogout}
+          className="text-sm text-gray-300 hover:text-white px-2 py-1 rounded"
+        >
+          Sair
+        </button>
       </header>
 
       {/* Mobile: barra inferior fixa */}
