@@ -111,7 +111,7 @@ export default function Dashboard() {
           <h2 className="text-lg font-semibold text-gray-800">
             {mesSel === 'TODOS' ? 'Últimas Vendas' : `Vendas de ${formatMesLabel(mesSel)}`}
           </h2>
-          <Link href="/vendas" className="text-sm text-blue-600 hover:underline">
+          <Link href="/vendas" className="text-sm hover:underline" style={{ color: '#2E78B7' }}>
             Ver todas →
           </Link>
         </div>
@@ -160,22 +160,24 @@ export default function Dashboard() {
       {/* Atalhos */}
       <div className="grid grid-cols-2 gap-4">
         <Link href="/estoque"
-          className="bg-white rounded-2xl shadow p-6 hover:shadow-md transition-shadow flex items-center gap-4">
-          <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl">
+          className="bg-white rounded-2xl shadow p-4 md:p-6 hover:shadow-md transition-shadow flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+            style={{ background: '#eef5fb' }}>
             📦
           </div>
           <div>
-            <p className="font-semibold text-gray-800">Gerenciar Estoque</p>
+            <p className="font-semibold" style={{ color: '#3B3B4F' }}>Gerenciar Estoque</p>
             <p className="text-sm text-gray-400">Cadastrar e visualizar aparelhos</p>
           </div>
         </Link>
         <Link href="/vendas"
-          className="bg-white rounded-2xl shadow p-6 hover:shadow-md transition-shadow flex items-center gap-4">
-          <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center text-2xl">
+          className="bg-white rounded-2xl shadow p-4 md:p-6 hover:shadow-md transition-shadow flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+            style={{ background: '#eef7ec' }}>
             💰
           </div>
           <div>
-            <p className="font-semibold text-gray-800">Ver Vendas</p>
+            <p className="font-semibold" style={{ color: '#3B3B4F' }}>Ver Vendas</p>
             <p className="text-sm text-gray-400">Histórico de todas as vendas</p>
           </div>
         </Link>

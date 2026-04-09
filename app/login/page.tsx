@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -28,66 +29,76 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900 flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4"
+      style={{ background: 'linear-gradient(135deg, #2a2a3d 0%, #1a2a40 50%, #2a2a3d 100%)' }}>
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-2xl shadow-lg shadow-blue-600/30 mb-4">
-            <span className="text-4xl">📱</span>
+          <div className="inline-block bg-white rounded-2xl p-4 shadow-xl mb-4">
+            <Image src="/logo.jpg" alt="iPhones Fortaleza" width={180} height={80}
+              className="object-contain" priority />
           </div>
-          <h1 className="text-2xl font-bold text-white">Gestão iPhones</h1>
-          <p className="text-blue-300 text-sm mt-1">Faça login para acessar o sistema</p>
+          <p className="text-gray-400 text-sm mt-2">Faça login para acessar o sistema</p>
         </div>
 
         {/* Card de login */}
-        <form onSubmit={handleSubmit} className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 shadow-2xl border border-white/10 space-y-5">
+        <form onSubmit={handleSubmit}
+          className="rounded-2xl p-6 shadow-2xl border space-y-5"
+          style={{ background: 'rgba(255,255,255,0.07)', borderColor: 'rgba(255,255,255,0.1)' }}>
 
           {/* Erro */}
           {erro && (
-            <div className="bg-red-500/20 border border-red-500/40 rounded-xl px-4 py-3 text-red-200 text-sm text-center">
+            <div className="rounded-xl px-4 py-3 text-sm text-center"
+              style={{ background: 'rgba(217,64,112,0.2)', border: '1px solid rgba(217,64,112,0.4)', color: '#f8a4c0' }}>
               {erro}
             </div>
           )}
 
           {/* Usuário */}
           <div>
-            <label className="block text-sm font-medium text-blue-200 mb-1.5">Usuário</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-300 text-lg">👤</span>
-              <input
-                type="text"
-                value={usuario}
-                onChange={e => setUsuario(e.target.value)}
-                className="w-full bg-white/10 border border-white/20 rounded-xl py-3 pl-10 pr-4 text-white placeholder-blue-300/50 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 text-sm"
-                placeholder="Digite seu usuário"
-                autoComplete="username"
-                required
-              />
-            </div>
+            <label className="block text-sm font-medium mb-1.5" style={{ color: '#8ab4d8' }}>Usuário</label>
+            <input
+              type="text"
+              value={usuario}
+              onChange={e => setUsuario(e.target.value)}
+              className="w-full rounded-xl py-3 px-4 text-white text-sm focus:outline-none focus:ring-2"
+              style={{
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.15)',
+              }}
+              placeholder="Digite seu usuário"
+              autoComplete="username"
+              required
+            />
           </div>
 
           {/* Senha */}
           <div>
-            <label className="block text-sm font-medium text-blue-200 mb-1.5">Senha</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-300 text-lg">🔒</span>
-              <input
-                type="password"
-                value={senha}
-                onChange={e => setSenha(e.target.value)}
-                className="w-full bg-white/10 border border-white/20 rounded-xl py-3 pl-10 pr-4 text-white placeholder-blue-300/50 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 text-sm"
-                placeholder="Digite sua senha"
-                autoComplete="current-password"
-                required
-              />
-            </div>
+            <label className="block text-sm font-medium mb-1.5" style={{ color: '#8ab4d8' }}>Senha</label>
+            <input
+              type="password"
+              value={senha}
+              onChange={e => setSenha(e.target.value)}
+              className="w-full rounded-xl py-3 px-4 text-white text-sm focus:outline-none focus:ring-2"
+              style={{
+                background: 'rgba(255,255,255,0.08)',
+                border: '1px solid rgba(255,255,255,0.15)',
+              }}
+              placeholder="Digite sua senha"
+              autoComplete="current-password"
+              required
+            />
           </div>
 
           {/* Botão */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-colors shadow-lg shadow-blue-600/30 text-sm"
+            className="w-full text-white font-semibold py-3 rounded-xl transition-all text-sm disabled:opacity-60"
+            style={{
+              background: 'linear-gradient(135deg, #2E78B7, #3B3B4F)',
+              boxShadow: '0 4px 15px rgba(46,120,183,0.3)',
+            }}
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
@@ -98,10 +109,15 @@ export default function LoginPage() {
           </button>
 
           {/* Info */}
-          <p className="text-center text-blue-300/60 text-xs">
-            Primeiro acesso? Use <strong className="text-blue-200">admin</strong> / <strong className="text-blue-200">admin</strong>
+          <p className="text-center text-xs" style={{ color: 'rgba(138,180,216,0.5)' }}>
+            Primeiro acesso? Use <strong style={{ color: '#8ab4d8' }}>admin</strong> / <strong style={{ color: '#8ab4d8' }}>admin</strong>
           </p>
         </form>
+
+        {/* Rodapé */}
+        <p className="text-center text-xs mt-6" style={{ color: 'rgba(255,255,255,0.2)' }}>
+          iPhones Fortaleza&reg; — Sistema de Gestão
+        </p>
       </div>
     </div>
   );

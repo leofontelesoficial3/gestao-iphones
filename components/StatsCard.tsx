@@ -5,26 +5,21 @@ interface StatsCardProps {
   color?: 'blue' | 'green' | 'yellow' | 'purple';
 }
 
-const colorMap = {
-  blue: 'border-blue-500 bg-blue-50',
-  green: 'border-green-500 bg-green-50',
-  yellow: 'border-yellow-500 bg-yellow-50',
-  purple: 'border-purple-500 bg-purple-50',
-};
-
-const textMap = {
-  blue: 'text-blue-700',
-  green: 'text-green-700',
-  yellow: 'text-yellow-700',
-  purple: 'text-purple-700',
+const styles: Record<string, { border: string; bg: string; text: string }> = {
+  blue:   { border: '#2E78B7', bg: '#eef5fb', text: '#2E78B7' },
+  green:  { border: '#5AAA4A', bg: '#eef7ec', text: '#5AAA4A' },
+  yellow: { border: '#E8872D', bg: '#fdf3e8', text: '#E8872D' },
+  purple: { border: '#3B3B4F', bg: '#ededf0', text: '#3B3B4F' },
 };
 
 export default function StatsCard({ title, value, sub, color = 'blue' }: StatsCardProps) {
+  const s = styles[color];
   return (
-    <div className={`border-l-4 rounded-xl p-5 shadow ${colorMap[color]}`}>
-      <p className="text-sm text-gray-500 font-medium">{title}</p>
-      <p className={`text-2xl font-bold mt-1 ${textMap[color]}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+    <div className="rounded-xl p-4 md:p-5 shadow bg-white"
+      style={{ borderLeft: `4px solid ${s.border}`, background: s.bg }}>
+      <p className="text-xs md:text-sm font-medium" style={{ color: '#6b7280' }}>{title}</p>
+      <p className="text-lg md:text-2xl font-bold mt-1" style={{ color: s.text }}>{value}</p>
+      {sub && <p className="text-xs mt-1" style={{ color: '#9ca3af' }}>{sub}</p>}
     </div>
   );
 }

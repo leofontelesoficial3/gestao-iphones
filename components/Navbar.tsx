@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from './AuthProvider';
 
@@ -22,18 +23,22 @@ export default function Navbar() {
   return (
     <>
       {/* Desktop: topo */}
-      <nav className="hidden md:flex bg-gray-900 text-white px-6 py-4 items-center gap-8 shadow-lg">
-        <span className="text-xl font-bold text-blue-400">Gestão iPhones</span>
-        <div className="flex gap-4 flex-1">
+      <nav className="hidden md:flex text-white px-6 py-3 items-center gap-8 shadow-lg"
+        style={{ background: '#2a2a3d' }}>
+        <div className="bg-white rounded-lg px-2 py-1">
+          <Image src="/logo.jpg" alt="iPhones Fortaleza" width={130} height={40} className="object-contain h-8 w-auto" />
+        </div>
+        <div className="flex gap-2 flex-1">
           {links.map(link => (
             <Link
               key={link.href}
               href={link.href}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
                 pathname === link.href
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                  ? 'text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-white/10'
               }`}
+              style={pathname === link.href ? { background: '#2E78B7' } : {}}
             >
               {link.label}
             </Link>
@@ -43,7 +48,7 @@ export default function Navbar() {
           <span className="text-sm text-gray-400">{user?.nome}</span>
           <button
             onClick={handleLogout}
-            className="px-3 py-1.5 rounded-lg text-sm text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
+            className="px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
           >
             Sair
           </button>
@@ -51,11 +56,14 @@ export default function Navbar() {
       </nav>
 
       {/* Mobile: header */}
-      <header className="md:hidden bg-gray-900 text-white px-4 py-3 shadow-lg flex items-center justify-between">
-        <span className="text-lg font-bold text-blue-400">Gestão iPhones</span>
+      <header className="md:hidden text-white px-4 py-3 shadow-lg flex items-center justify-between"
+        style={{ background: '#2a2a3d' }}>
+        <div className="bg-white rounded-lg px-2 py-1">
+          <Image src="/logo.jpg" alt="iPhones Fortaleza" width={110} height={32} className="object-contain h-7 w-auto" />
+        </div>
         <button
           onClick={handleLogout}
-          className="text-sm text-gray-300 hover:text-white px-2 py-1 rounded"
+          className="text-sm text-gray-400 hover:text-white px-2 py-1 rounded"
         >
           Sair
         </button>
@@ -68,11 +76,8 @@ export default function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`flex flex-col items-center py-2 px-4 min-w-[80px] transition-colors ${
-                pathname === link.href
-                  ? 'text-blue-600'
-                  : 'text-gray-400'
-              }`}
+              className="flex flex-col items-center py-2 px-4 min-w-[80px] transition-colors"
+              style={{ color: pathname === link.href ? '#2E78B7' : '#9ca3af' }}
             >
               <span className="text-xl">{link.icon}</span>
               <span className="text-[11px] font-semibold mt-0.5">{link.label}</span>
