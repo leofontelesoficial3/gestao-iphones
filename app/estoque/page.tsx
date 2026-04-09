@@ -7,6 +7,7 @@ import VendaModal, { ProdutoRecebidoData } from '@/components/VendaModal';
 import FotosModal from '@/components/FotosModal';
 import CodigoModal from '@/components/CodigoModal';
 import Toast from '@/components/Toast';
+import { useAuth } from '@/components/AuthProvider';
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -29,6 +30,7 @@ function diasEmEstoque(dataEntrada: string): number {
 }
 
 export default function EstoquePage() {
+  const { isAdmin } = useAuth();
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [filtro, setFiltro] = useState('');
   const [filtroStatus, setFiltroStatus] = useState<'TODOS' | 'EM_ESTOQUE' | 'VENDIDO'>('EM_ESTOQUE');
@@ -125,12 +127,14 @@ export default function EstoquePage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Estoque</h1>
-        <button
-          onClick={() => { setEditando(null); setModalProduto(true); }}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 text-sm"
-        >
-          + Novo Produto
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => { setEditando(null); setModalProduto(true); }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 text-sm"
+          >
+            + Novo Produto
+          </button>
+        )}
       </div>
 
       {/* Filtros */}
@@ -143,7 +147,7 @@ export default function EstoquePage() {
           onChange={e => setFiltro(e.target.value)}
         />
         <div className="flex gap-1">
-          {(['TODOS', 'EM_ESTOQUE', 'VENDIDO'] as const).map(s => (
+          {(isAdmin ? ['TODOS', 'EM_ESTOQUE', 'VENDIDO'] as const : ['EM_ESTOQUE'] as const).map(s => (
             <button key={s}
               onClick={() => setFiltroStatus(s)}
               className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -206,25 +210,27 @@ export default function EstoquePage() {
                   <span className="ml-1 text-gray-500">{p.bateria}%</span>
                 </p>
               </div>
-              <div>
-                <span className="text-gray-400 text-xs">Compra</span>
-                <p className="font-semibold text-gray-700">{fmt(p.valorCompra)}</p>
-              </div>
-              {p.status === 'VENDIDO' ? (
+              {isAdmin && (
+                <div>
+                  <span className="text-gray-400 text-xs">Compra</span>
+                  <p className="font-semibold text-gray-700">{fmt(p.valorCompra)}</p>
+                </div>
+              )}
+              {p.status === 'VENDIDO' && isAdmin ? (
                 <div>
                   <span className="text-gray-400 text-xs">Venda</span>
                   <p className="font-semibold">{p.valorVenda ? fmt(p.valorVenda) : '—'}</p>
                 </div>
-              ) : (
+              ) : p.status === 'EM_ESTOQUE' ? (
                 <div>
                   <span className="text-gray-400 text-xs">Dias em estoque</span>
                   <p className="font-semibold text-orange-600">{diasEmEstoque(p.dataEntrada)} dias</p>
                 </div>
-              )}
+              ) : null}
             </div>
 
-            {/* Lucro e data (só vendidos) */}
-            {p.status === 'VENDIDO' && (
+            {/* Lucro e data (só vendidos, só admin) */}
+            {p.status === 'VENDIDO' && isAdmin && (
               <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 text-sm">
                 <div>
                   <span className="text-gray-400 text-xs">Data Venda</span>
@@ -255,13 +261,15 @@ export default function EstoquePage() {
               >
                 📷{(p.fotos?.length ?? 0) > 0 ? ` (${p.fotos!.length})` : ''}
               </button>
-              <button
-                onClick={() => { setEditando(p); setModalProduto(true); }}
-                className="flex-1 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 font-medium"
-              >
-                Editar
-              </button>
-              {p.status === 'EM_ESTOQUE' && (
+              {isAdmin && (
+                <button
+                  onClick={() => { setEditando(p); setModalProduto(true); }}
+                  className="flex-1 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 font-medium"
+                >
+                  Editar
+                </button>
+              )}
+              {isAdmin && p.status === 'EM_ESTOQUE' && (
                 <button
                   onClick={() => { setVendendo(p); setModalVenda(true); }}
                   className="flex-1 py-2 text-sm bg-green-100 hover:bg-green-200 rounded-lg text-green-700 font-medium"
@@ -269,7 +277,7 @@ export default function EstoquePage() {
                   Vender
                 </button>
               )}
-              {p.status === 'VENDIDO' && (
+              {isAdmin && p.status === 'VENDIDO' && (
                 <button
                   onClick={() => handleDesfazerVenda(p)}
                   className="flex-1 py-2 text-sm bg-yellow-100 hover:bg-yellow-200 rounded-lg text-yellow-700 font-medium"
@@ -277,12 +285,14 @@ export default function EstoquePage() {
                   Desfazer
                 </button>
               )}
-              <button
-                onClick={() => handleDelete(p.id)}
-                className="py-2 px-3 text-sm bg-red-100 hover:bg-red-200 rounded-lg text-red-600 font-medium"
-              >
-                Excluir
-              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => handleDelete(p.id)}
+                  className="py-2 px-3 text-sm bg-red-100 hover:bg-red-200 rounded-lg text-red-600 font-medium"
+                >
+                  Excluir
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -300,12 +310,12 @@ export default function EstoquePage() {
                 <th className="text-left py-3 px-3 text-gray-500 font-medium">GB / Cor</th>
                 <th className="text-left py-3 px-3 text-gray-500 font-medium">Estado / Bat.</th>
                 <th className="text-left py-3 px-3 text-gray-500 font-medium">IMEI</th>
-                <th className="text-right py-3 px-3 text-gray-500 font-medium">Compra</th>
-                <th className="text-right py-3 px-3 text-gray-500 font-medium">Venda</th>
-                <th className="text-right py-3 px-3 text-gray-500 font-medium">Lucro</th>
+                {isAdmin && <th className="text-right py-3 px-3 text-gray-500 font-medium">Compra</th>}
+                {isAdmin && <th className="text-right py-3 px-3 text-gray-500 font-medium">Venda</th>}
+                {isAdmin && <th className="text-right py-3 px-3 text-gray-500 font-medium">Lucro</th>}
                 <th className="text-center py-3 px-3 text-gray-500 font-medium">Dias</th>
-                <th className="text-left py-3 px-3 text-gray-500 font-medium">Data Venda</th>
-                <th className="text-left py-3 px-3 text-gray-500 font-medium">Status</th>
+                {isAdmin && <th className="text-left py-3 px-3 text-gray-500 font-medium">Data Venda</th>}
+                {isAdmin && <th className="text-left py-3 px-3 text-gray-500 font-medium">Status</th>}
                 <th className="py-3 px-3 text-gray-500 font-medium">Ações</th>
               </tr>
             </thead>
@@ -346,15 +356,19 @@ export default function EstoquePage() {
                   <td className="py-2.5 px-3 font-mono text-xs text-gray-400">
                     {p.imei || '—'}
                   </td>
-                  <td className="py-2.5 px-3 text-right">{fmt(p.valorCompra)}</td>
-                  <td className="py-2.5 px-3 text-right">
-                    {p.valorVenda ? fmt(p.valorVenda) : <span className="text-gray-300">—</span>}
-                  </td>
-                  <td className={`py-2.5 px-3 text-right font-semibold ${
-                    (p.lucro ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {p.lucro !== undefined ? fmt(p.lucro) : <span className="text-gray-300">—</span>}
-                  </td>
+                  {isAdmin && <td className="py-2.5 px-3 text-right">{fmt(p.valorCompra)}</td>}
+                  {isAdmin && (
+                    <td className="py-2.5 px-3 text-right">
+                      {p.valorVenda ? fmt(p.valorVenda) : <span className="text-gray-300">—</span>}
+                    </td>
+                  )}
+                  {isAdmin && (
+                    <td className={`py-2.5 px-3 text-right font-semibold ${
+                      (p.lucro ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {p.lucro !== undefined ? fmt(p.lucro) : <span className="text-gray-300">—</span>}
+                    </td>
+                  )}
                   <td className="py-2.5 px-3 text-center">
                     {p.status === 'EM_ESTOQUE' ? (
                       <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
@@ -362,20 +376,24 @@ export default function EstoquePage() {
                       </span>
                     ) : <span className="text-gray-300">—</span>}
                   </td>
-                  <td className="py-2.5 px-3 text-gray-500 text-xs">
-                    {p.dataVenda
-                      ? new Date(p.dataVenda + 'T12:00:00').toLocaleDateString('pt-BR')
-                      : <span className="text-gray-300">—</span>}
-                  </td>
-                  <td className="py-2.5 px-3">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
-                      p.status === 'EM_ESTOQUE'
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'bg-green-100 text-green-700'
-                    }`}>
-                      {p.status === 'EM_ESTOQUE' ? 'Estoque' : 'Vendido'}
-                    </span>
-                  </td>
+                  {isAdmin && (
+                    <td className="py-2.5 px-3 text-gray-500 text-xs">
+                      {p.dataVenda
+                        ? new Date(p.dataVenda + 'T12:00:00').toLocaleDateString('pt-BR')
+                        : <span className="text-gray-300">—</span>}
+                    </td>
+                  )}
+                  {isAdmin && (
+                    <td className="py-2.5 px-3">
+                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+                        p.status === 'EM_ESTOQUE'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-green-100 text-green-700'
+                      }`}>
+                        {p.status === 'EM_ESTOQUE' ? 'Estoque' : 'Vendido'}
+                      </span>
+                    </td>
+                  )}
                   <td className="py-2.5 px-3">
                     <div className="flex gap-1 justify-center">
                       <button
@@ -394,14 +412,16 @@ export default function EstoquePage() {
                           <span className="ml-0.5">{p.fotos!.length}</span>
                         )}
                       </button>
-                      <button
-                        onClick={() => { setEditando(p); setModalProduto(true); }}
-                        className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-600"
-                        title="Editar"
-                      >
-                        Editar
-                      </button>
-                      {p.status === 'EM_ESTOQUE' && (
+                      {isAdmin && (
+                        <button
+                          onClick={() => { setEditando(p); setModalProduto(true); }}
+                          className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded text-gray-600"
+                          title="Editar"
+                        >
+                          Editar
+                        </button>
+                      )}
+                      {isAdmin && p.status === 'EM_ESTOQUE' && (
                         <button
                           onClick={() => { setVendendo(p); setModalVenda(true); }}
                           className="px-2 py-1 text-xs bg-green-100 hover:bg-green-200 rounded text-green-700"
@@ -410,7 +430,7 @@ export default function EstoquePage() {
                           Vender
                         </button>
                       )}
-                      {p.status === 'VENDIDO' && (
+                      {isAdmin && p.status === 'VENDIDO' && (
                         <button
                           onClick={() => handleDesfazerVenda(p)}
                           className="px-2 py-1 text-xs bg-yellow-100 hover:bg-yellow-200 rounded text-yellow-700"
@@ -418,13 +438,15 @@ export default function EstoquePage() {
                           Desfazer
                         </button>
                       )}
-                      <button
-                        onClick={() => handleDelete(p.id)}
-                        className="px-2 py-1 text-xs bg-red-100 hover:bg-red-200 rounded text-red-600"
-                        title="Excluir"
-                      >
-                        Excluir
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleDelete(p.id)}
+                          className="px-2 py-1 text-xs bg-red-100 hover:bg-red-200 rounded text-red-600"
+                          title="Excluir"
+                        >
+                          Excluir
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

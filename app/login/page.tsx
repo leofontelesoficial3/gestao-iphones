@@ -112,9 +112,14 @@ export default function LoginPage() {
           </button>
 
           {/* Info */}
-          <p className="text-center text-xs" style={{ color: 'rgba(138,180,216,0.5)' }}>
-            Primeiro acesso? Use <strong style={{ color: '#8ab4d8' }}>admin</strong> / <strong style={{ color: '#8ab4d8' }}>admin</strong>
-          </p>
+          <div className="text-center text-xs space-y-1" style={{ color: 'rgba(138,180,216,0.5)' }}>
+            <p>
+              Admin: <strong style={{ color: '#8ab4d8' }}>admin</strong> / <strong style={{ color: '#8ab4d8' }}>admin</strong>
+            </p>
+            <p>
+              Vendedor: <strong style={{ color: '#8ab4d8' }}>vendedor</strong> / <strong style={{ color: '#8ab4d8' }}>vendedor</strong>
+            </p>
+          </div>
         </form>
 
         {/* Rodapé */}

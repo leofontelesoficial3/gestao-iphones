@@ -4,16 +4,18 @@ import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from './AuthProvider';
 
-const links = [
-  { href: '/', label: 'Dashboard', icon: '📊' },
-  { href: '/estoque', label: 'Estoque', icon: '📦' },
-  { href: '/vendas', label: 'Vendas', icon: '💰' },
+const allLinks = [
+  { href: '/', label: 'Dashboard', icon: '📊', adminOnly: true },
+  { href: '/estoque', label: 'Estoque', icon: '📦', adminOnly: false },
+  { href: '/vendas', label: 'Vendas', icon: '💰', adminOnly: true },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
+
+  const links = allLinks.filter(l => !l.adminOnly || isAdmin);
 
   const handleLogout = () => {
     logout();
@@ -53,7 +55,12 @@ export default function Navbar() {
           ))}
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-400">{user?.nome}</span>
+          <div className="text-right">
+            <span className="text-sm text-gray-400 block">{user?.nome}</span>
+            <span className={`text-[10px] font-semibold ${isAdmin ? 'text-blue-400' : 'text-green-400'}`}>
+              {isAdmin ? 'Administrador' : 'Vendedor'}
+            </span>
+          </div>
           <button
             onClick={handleLogout}
             className="px-3 py-1.5 rounded-lg text-sm text-gray-400 hover:text-white hover:bg-white/10 transition-colors"

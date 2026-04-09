@@ -1,16 +1,18 @@
 'use client';
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, getLoggedUser, login as doLogin, logout as doLogout } from '@/lib/auth';
+import { User, Perfil, getLoggedUser, login as doLogin, logout as doLogout } from '@/lib/auth';
 
 interface AuthCtx {
   user: User | null;
   loading: boolean;
+  isAdmin: boolean;
+  perfil: Perfil | null;
   login: (usuario: string, senha: string) => boolean;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthCtx>({
-  user: null, loading: true,
+  user: null, loading: true, isAdmin: false, perfil: null,
   login: () => false, logout: () => {},
 });
 
@@ -36,8 +38,11 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  const isAdmin = user?.perfil === 'admin';
+  const perfil = user?.perfil ?? null;
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, perfil, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

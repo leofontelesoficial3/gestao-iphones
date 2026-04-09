@@ -3,8 +3,10 @@ import { useAuth } from './AuthProvider';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 
+const ADMIN_ROUTES = ['/', '/vendas'];
+
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -12,7 +14,11 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     if (!loading && !user && pathname !== '/login') {
       router.replace('/login');
     }
-  }, [user, loading, pathname, router]);
+    // Vendedor tentando acessar rota de admin → redireciona pro estoque
+    if (!loading && user && !isAdmin && ADMIN_ROUTES.includes(pathname)) {
+      router.replace('/estoque');
+    }
+  }, [user, loading, pathname, router, isAdmin]);
 
   if (loading) {
     return (
@@ -26,6 +32,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   }
 
   if (!user && pathname !== '/login') return null;
+  if (user && !isAdmin && ADMIN_ROUTES.includes(pathname)) return null;
 
   return <>{children}</>;
 }
