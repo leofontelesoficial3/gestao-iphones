@@ -7,6 +7,7 @@ import VendaModal, { ProdutoRecebidoData } from '@/components/VendaModal';
 import FotosModal from '@/components/FotosModal';
 import CodigoModal from '@/components/CodigoModal';
 import Toast from '@/components/Toast';
+import ReciboModal from '@/components/ReciboModal';
 import { useAuth } from '@/components/AuthProvider';
 
 const fmt = (v: number) =>
@@ -46,6 +47,8 @@ export default function EstoquePage() {
   const [toastVenda, setToastVenda] = useState(false);
   const [toastEstoque, setToastEstoque] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+  const [reciboAberto, setReciboAberto] = useState(false);
+  const [produtoRecibo, setProdutoRecibo] = useState<Produto | null>(null);
 
   const load = useCallback(() => {
     setProdutos(getProdutos());
@@ -86,6 +89,10 @@ export default function EstoquePage() {
           fotos: [],
         });
       }
+      // Monta o produto atualizado para o recibo
+      const vendido: Produto = { ...vendendo, ...updates } as Produto;
+      setProdutoRecibo(vendido);
+      setReciboAberto(true);
       setToastMsg(`${vendendo.modelo} ${vendendo.linha} vendido por ${valor}!`);
       setToastVenda(true);
       load();
@@ -269,7 +276,7 @@ export default function EstoquePage() {
                   Editar
                 </button>
               )}
-              {isAdmin && p.status === 'EM_ESTOQUE' && (
+              {p.status === 'EM_ESTOQUE' && (
                 <button
                   onClick={() => { setVendendo(p); setModalVenda(true); }}
                   className="flex-1 py-2 text-sm bg-green-100 hover:bg-green-200 rounded-lg text-green-700 font-medium"
@@ -421,7 +428,7 @@ export default function EstoquePage() {
                           Editar
                         </button>
                       )}
-                      {isAdmin && p.status === 'EM_ESTOQUE' && (
+                      {p.status === 'EM_ESTOQUE' && (
                         <button
                           onClick={() => { setVendendo(p); setModalVenda(true); }}
                           className="px-2 py-1 text-xs bg-green-100 hover:bg-green-200 rounded text-green-700"
@@ -480,6 +487,11 @@ export default function EstoquePage() {
         open={modalCodigo}
         onClose={() => { setModalCodigo(false); setVerCodigo(null); }}
         produto={verCodigo}
+      />
+      <ReciboModal
+        open={reciboAberto}
+        onClose={() => { setReciboAberto(false); setProdutoRecibo(null); }}
+        produto={produtoRecibo}
       />
       <Toast
         open={toastVenda}
