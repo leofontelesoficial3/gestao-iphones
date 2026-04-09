@@ -15,6 +15,9 @@ export default function VendasPage() {
   const [vendas, setVendas] = useState<Produto[]>([]);
   const [busca, setBusca] = useState('');
   const [mesSel, setMesSel] = useState('TODOS');
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
+  const [ordem, setOrdem] = useState<'recente' | 'antiga'>('recente');
 
   useEffect(() => {
     const todos = getProdutos();
@@ -38,13 +41,22 @@ export default function VendasPage() {
     return `${MESES[parseInt(mes) - 1]} ${ano}`;
   };
 
-  const filtradas = vendas.filter(p => {
-    const matchMes = mesSel === 'TODOS' || p.dataVenda?.startsWith(mesSel);
-    const q = busca.toLowerCase();
-    const matchQ = !q || [p.modelo, p.linha, p.cor, p.cliente, p.contato, String(p.codigo)]
-      .some(v => v?.toLowerCase().includes(q));
-    return matchMes && matchQ;
-  });
+  const filtradas = useMemo(() => {
+    const list = vendas.filter(p => {
+      const matchMes = mesSel === 'TODOS' || p.dataVenda?.startsWith(mesSel);
+      const matchInicio = !dataInicio || (p.dataVenda ?? '') >= dataInicio;
+      const matchFim = !dataFim || (p.dataVenda ?? '') <= dataFim;
+      const q = busca.toLowerCase();
+      const matchQ = !q || [p.modelo, p.linha, p.cor, p.cliente, p.contato, String(p.codigo)]
+        .some(v => v?.toLowerCase().includes(q));
+      return matchMes && matchInicio && matchFim && matchQ;
+    });
+    return list.sort((a, b) =>
+      ordem === 'recente'
+        ? (b.dataVenda ?? '').localeCompare(a.dataVenda ?? '')
+        : (a.dataVenda ?? '').localeCompare(b.dataVenda ?? '')
+    );
+  }, [vendas, mesSel, dataInicio, dataFim, busca, ordem]);
 
   const totalFaturamento = filtradas.reduce((s, p) => s + (p.valorVenda ?? 0), 0);
   const totalLucro = filtradas.reduce((s, p) => s + (p.lucro ?? 0), 0);
@@ -54,8 +66,7 @@ export default function VendasPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-gray-800">Vendas</h1>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">Mês:</span>
+        <div className="flex items-center gap-2 flex-wrap">
           <select
             className="input !w-auto text-sm"
             value={mesSel}
@@ -65,6 +76,14 @@ export default function VendasPage() {
             {mesesDisponiveis.map(m => (
               <option key={m} value={m}>{formatMesLabel(m)}</option>
             ))}
+          </select>
+          <select
+            className="input !w-auto text-sm"
+            value={ordem}
+            onChange={e => setOrdem(e.target.value as 'recente' | 'antiga')}
+          >
+            <option value="recente">Mais recente</option>
+            <option value="antiga">Mais antiga</option>
           </select>
         </div>
       </div>
@@ -85,16 +104,36 @@ export default function VendasPage() {
         </div>
       </div>
 
-      {/* Busca */}
-      <div className="flex gap-3 items-center">
+      {/* Filtros */}
+      <div className="flex gap-2 flex-wrap items-end">
         <input
           type="text"
-          placeholder="Buscar modelo, cliente, contato..."
-          className="input flex-1 md:max-w-sm"
+          placeholder="Buscar modelo, cliente..."
+          className="input flex-1 md:max-w-xs"
           value={busca}
           onChange={e => setBusca(e.target.value)}
         />
-        <span className="text-sm text-gray-400 whitespace-nowrap">{filtradas.length} venda(s)</span>
+        <div className="flex gap-2 items-center">
+          <div>
+            <label className="text-[10px] text-gray-400 block">De</label>
+            <input type="date" className="input !w-auto text-sm !py-1.5" value={dataInicio}
+              onChange={e => setDataInicio(e.target.value)} />
+          </div>
+          <div>
+            <label className="text-[10px] text-gray-400 block">Até</label>
+            <input type="date" className="input !w-auto text-sm !py-1.5" value={dataFim}
+              onChange={e => setDataFim(e.target.value)} />
+          </div>
+          {(dataInicio || dataFim) && (
+            <button
+              onClick={() => { setDataInicio(''); setDataFim(''); }}
+              className="text-xs text-red-500 hover:text-red-700 self-end pb-1.5"
+            >
+              Limpar
+            </button>
+          )}
+        </div>
+        <span className="text-sm text-gray-400 whitespace-nowrap self-end pb-1">{filtradas.length} venda(s)</span>
       </div>
 
       {/* Mobile: Cards */}

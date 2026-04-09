@@ -5,9 +5,16 @@ import { getProdutos, addProduto, updateProduto, deleteProduto, getNextCodigo } 
 import ProdutoModal from '@/components/ProdutoModal';
 import VendaModal, { ProdutoRecebidoData } from '@/components/VendaModal';
 import FotosModal from '@/components/FotosModal';
+import CodigoModal from '@/components/CodigoModal';
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+function diasEmEstoque(dataEntrada: string): number {
+  const entrada = new Date(dataEntrada + 'T12:00:00');
+  const hoje = new Date();
+  return Math.floor((hoje.getTime() - entrada.getTime()) / (1000 * 60 * 60 * 24));
+}
 
 export default function EstoquePage() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
@@ -16,9 +23,11 @@ export default function EstoquePage() {
   const [modalProduto, setModalProduto] = useState(false);
   const [modalVenda, setModalVenda] = useState(false);
   const [modalFotos, setModalFotos] = useState(false);
+  const [modalCodigo, setModalCodigo] = useState(false);
   const [editando, setEditando] = useState<Produto | null>(null);
   const [vendendo, setVendendo] = useState<Produto | null>(null);
   const [verFotos, setVerFotos] = useState<Produto | null>(null);
+  const [verCodigo, setVerCodigo] = useState<Produto | null>(null);
   const [nextCodigo, setNextCodigo] = useState(10001);
 
   const load = useCallback(() => {
@@ -188,8 +197,8 @@ export default function EstoquePage() {
                 </div>
               ) : (
                 <div>
-                  <span className="text-gray-400 text-xs">IMEI</span>
-                  <p className="font-mono text-xs text-gray-500 truncate">{p.imei || '—'}</p>
+                  <span className="text-gray-400 text-xs">Dias em estoque</span>
+                  <p className="font-semibold text-orange-600">{diasEmEstoque(p.dataEntrada)} dias</p>
                 </div>
               )}
             </div>
@@ -213,12 +222,18 @@ export default function EstoquePage() {
             )}
 
             {/* Botões de ação */}
-            <div className="flex gap-2 pt-1">
+            <div className="flex gap-2 pt-1 flex-wrap">
+              <button
+                onClick={() => { setVerCodigo(p); setModalCodigo(true); }}
+                className="py-2 px-3 text-sm bg-indigo-100 hover:bg-indigo-200 rounded-lg text-indigo-700 font-medium"
+              >
+                QR
+              </button>
               <button
                 onClick={() => { setVerFotos(p); setModalFotos(true); }}
                 className="flex-1 py-2 text-sm bg-purple-100 hover:bg-purple-200 rounded-lg text-purple-700 font-medium"
               >
-                📷 Fotos{(p.fotos?.length ?? 0) > 0 ? ` (${p.fotos!.length})` : ''}
+                📷{(p.fotos?.length ?? 0) > 0 ? ` (${p.fotos!.length})` : ''}
               </button>
               <button
                 onClick={() => { setEditando(p); setModalProduto(true); }}
@@ -268,6 +283,7 @@ export default function EstoquePage() {
                 <th className="text-right py-3 px-3 text-gray-500 font-medium">Compra</th>
                 <th className="text-right py-3 px-3 text-gray-500 font-medium">Venda</th>
                 <th className="text-right py-3 px-3 text-gray-500 font-medium">Lucro</th>
+                <th className="text-center py-3 px-3 text-gray-500 font-medium">Dias</th>
                 <th className="text-left py-3 px-3 text-gray-500 font-medium">Data Venda</th>
                 <th className="text-left py-3 px-3 text-gray-500 font-medium">Status</th>
                 <th className="py-3 px-3 text-gray-500 font-medium">Ações</th>
@@ -276,7 +292,7 @@ export default function EstoquePage() {
             <tbody>
               {filtrados.length === 0 && (
                 <tr>
-                  <td colSpan={12} className="py-10 text-center text-gray-400">
+                  <td colSpan={13} className="py-10 text-center text-gray-400">
                     Nenhum produto encontrado.
                   </td>
                 </tr>
@@ -319,6 +335,13 @@ export default function EstoquePage() {
                   }`}>
                     {p.lucro !== undefined ? fmt(p.lucro) : <span className="text-gray-300">—</span>}
                   </td>
+                  <td className="py-2.5 px-3 text-center">
+                    {p.status === 'EM_ESTOQUE' ? (
+                      <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-orange-100 text-orange-700">
+                        {diasEmEstoque(p.dataEntrada)}d
+                      </span>
+                    ) : <span className="text-gray-300">—</span>}
+                  </td>
                   <td className="py-2.5 px-3 text-gray-500 text-xs">
                     {p.dataVenda
                       ? new Date(p.dataVenda + 'T12:00:00').toLocaleDateString('pt-BR')
@@ -335,6 +358,13 @@ export default function EstoquePage() {
                   </td>
                   <td className="py-2.5 px-3">
                     <div className="flex gap-1 justify-center">
+                      <button
+                        onClick={() => { setVerCodigo(p); setModalCodigo(true); }}
+                        className="px-2 py-1 text-xs bg-indigo-100 hover:bg-indigo-200 rounded text-indigo-700"
+                        title="QR Code / Código de Barras"
+                      >
+                        QR
+                      </button>
                       <button
                         onClick={() => { setVerFotos(p); setModalFotos(true); }}
                         className="px-2 py-1 text-xs bg-purple-100 hover:bg-purple-200 rounded text-purple-700 relative"
@@ -403,6 +433,11 @@ export default function EstoquePage() {
         fotos={verFotos?.fotos ?? []}
         onUpdate={handleFotosUpdate}
         produtoNome={verFotos ? `${verFotos.modelo} ${verFotos.linha} — ${verFotos.cor}` : ''}
+      />
+      <CodigoModal
+        open={modalCodigo}
+        onClose={() => { setModalCodigo(false); setVerCodigo(null); }}
+        produto={verCodigo}
       />
     </div>
   );
