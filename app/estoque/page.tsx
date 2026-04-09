@@ -49,6 +49,10 @@ export default function EstoquePage() {
   const [toastMsg, setToastMsg] = useState('');
   const [reciboAberto, setReciboAberto] = useState(false);
   const [produtoRecibo, setProdutoRecibo] = useState<Produto | null>(null);
+  const [ocultarValores, setOcultarValores] = useState(false);
+
+  // Mostra valores? Admin + toggle ligado
+  const mostrarValores = isAdmin && !ocultarValores;
 
   const load = useCallback(() => {
     setProdutos(getProdutos());
@@ -167,6 +171,19 @@ export default function EstoquePage() {
           ))}
         </div>
         <span className="text-sm text-gray-400 self-center">{filtrados.length} resultado(s)</span>
+        {isAdmin && (
+          <button
+            onClick={() => setOcultarValores(prev => !prev)}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              ocultarValores
+                ? 'bg-red-100 text-red-600 border border-red-200'
+                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+            title={ocultarValores ? 'Mostrar valores' : 'Ocultar valores'}
+          >
+            {ocultarValores ? '🔒 Valores ocultos' : '👁 Ocultar valores'}
+          </button>
+        )}
       </div>
 
       {/* Mobile: Cards */}
@@ -217,13 +234,13 @@ export default function EstoquePage() {
                   <span className="ml-1 text-gray-500">{p.bateria}%</span>
                 </p>
               </div>
-              {isAdmin && (
+              {mostrarValores && (
                 <div>
                   <span className="text-gray-400 text-xs">Compra</span>
                   <p className="font-semibold text-gray-700">{fmt(p.valorCompra)}</p>
                 </div>
               )}
-              {p.status === 'VENDIDO' && isAdmin ? (
+              {p.status === 'VENDIDO' && mostrarValores ? (
                 <div>
                   <span className="text-gray-400 text-xs">Venda</span>
                   <p className="font-semibold">{p.valorVenda ? fmt(p.valorVenda) : '—'}</p>
@@ -237,7 +254,7 @@ export default function EstoquePage() {
             </div>
 
             {/* Lucro e data (só vendidos, só admin) */}
-            {p.status === 'VENDIDO' && isAdmin && (
+            {p.status === 'VENDIDO' && mostrarValores && (
               <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 text-sm">
                 <div>
                   <span className="text-gray-400 text-xs">Data Venda</span>
@@ -317,11 +334,11 @@ export default function EstoquePage() {
                 <th className="text-left py-3 px-3 text-gray-500 font-medium">GB / Cor</th>
                 <th className="text-left py-3 px-3 text-gray-500 font-medium">Estado / Bat.</th>
                 <th className="text-left py-3 px-3 text-gray-500 font-medium">IMEI</th>
-                {isAdmin && <th className="text-right py-3 px-3 text-gray-500 font-medium">Compra</th>}
-                {isAdmin && <th className="text-right py-3 px-3 text-gray-500 font-medium">Venda</th>}
-                {isAdmin && <th className="text-right py-3 px-3 text-gray-500 font-medium">Lucro</th>}
+                {mostrarValores && <th className="text-right py-3 px-3 text-gray-500 font-medium">Compra</th>}
+                {mostrarValores && <th className="text-right py-3 px-3 text-gray-500 font-medium">Venda</th>}
+                {mostrarValores && <th className="text-right py-3 px-3 text-gray-500 font-medium">Lucro</th>}
                 <th className="text-center py-3 px-3 text-gray-500 font-medium">Dias</th>
-                {isAdmin && <th className="text-left py-3 px-3 text-gray-500 font-medium">Data Venda</th>}
+                {mostrarValores && <th className="text-left py-3 px-3 text-gray-500 font-medium">Data Venda</th>}
                 {isAdmin && <th className="text-left py-3 px-3 text-gray-500 font-medium">Status</th>}
                 <th className="py-3 px-3 text-gray-500 font-medium">Ações</th>
               </tr>
@@ -363,13 +380,13 @@ export default function EstoquePage() {
                   <td className="py-2.5 px-3 font-mono text-xs text-gray-400">
                     {p.imei || '—'}
                   </td>
-                  {isAdmin && <td className="py-2.5 px-3 text-right">{fmt(p.valorCompra)}</td>}
-                  {isAdmin && (
+                  {mostrarValores && <td className="py-2.5 px-3 text-right">{fmt(p.valorCompra)}</td>}
+                  {mostrarValores && (
                     <td className="py-2.5 px-3 text-right">
                       {p.valorVenda ? fmt(p.valorVenda) : <span className="text-gray-300">—</span>}
                     </td>
                   )}
-                  {isAdmin && (
+                  {mostrarValores && (
                     <td className={`py-2.5 px-3 text-right font-semibold ${
                       (p.lucro ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
                     }`}>
@@ -383,7 +400,7 @@ export default function EstoquePage() {
                       </span>
                     ) : <span className="text-gray-300">—</span>}
                   </td>
-                  {isAdmin && (
+                  {mostrarValores && (
                     <td className="py-2.5 px-3 text-gray-500 text-xs">
                       {p.dataVenda
                         ? new Date(p.dataVenda + 'T12:00:00').toLocaleDateString('pt-BR')

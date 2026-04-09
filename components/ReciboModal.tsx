@@ -58,25 +58,24 @@ export default function ReciboModal({ open, onClose, produto }: Props) {
           .total-value { font-size: 24px; font-weight: 800; }
           .footer { text-align: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid #eee; font-size: 10px; color: #bbb; }
 
-          /* Termo de Garantia */
-          .garantia-page { page-break-before: always; padding-top: 24px; }
-          .garantia-header { text-align: center; border-bottom: 3px solid #3B3B4F; padding-bottom: 14px; margin-bottom: 20px; }
-          .garantia-header h2 { font-size: 24px; font-weight: 800; color: #3B3B4F; letter-spacing: 1px; }
-          .garantia-header h3 { font-size: 13px; color: #2E78B7; text-transform: uppercase; letter-spacing: 4px; margin-top: 6px; }
-          .garantia-info { margin-bottom: 20px; }
-          .garantia-info .gi-row { display: flex; border-bottom: 1px solid #e5e5e5; padding: 8px 0; font-size: 15px; }
-          .garantia-info .gi-label { width: 180px; color: #888; font-weight: 500; flex-shrink: 0; }
+          /* Termo de Garantia — compacto para 1 página */
+          .garantia-page { page-break-before: always; padding-top: 10px; }
+          .garantia-header { text-align: center; border-bottom: 2px solid #3B3B4F; padding-bottom: 8px; margin-bottom: 10px; }
+          .garantia-header h3 { font-size: 12px; color: #2E78B7; text-transform: uppercase; letter-spacing: 3px; margin-top: 4px; }
+          .garantia-info { margin-bottom: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+          .garantia-info .gi-row { display: flex; border-bottom: 1px solid #eee; padding: 3px 0; font-size: 11px; }
+          .garantia-info .gi-label { width: 90px; color: #888; font-weight: 500; flex-shrink: 0; }
           .garantia-info .gi-value { font-weight: 600; color: #333; }
-          .garantia-termos { margin-top: 20px; }
-          .garantia-termos h4 { font-size: 18px; font-weight: 700; color: #3B3B4F; margin-bottom: 14px; text-align: center; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #2E78B7; padding-bottom: 8px; }
-          .garantia-termos ol { padding-left: 24px; }
-          .garantia-termos li { font-size: 15px; line-height: 1.8; color: #444; margin-bottom: 10px; text-align: justify; }
+          .garantia-termos { margin-top: 8px; }
+          .garantia-termos h4 { font-size: 13px; font-weight: 700; color: #3B3B4F; margin-bottom: 6px; text-align: center; text-transform: uppercase; letter-spacing: 1px; border-bottom: 2px solid #2E78B7; padding-bottom: 4px; }
+          .garantia-termos ol { padding-left: 18px; }
+          .garantia-termos li { font-size: 11px; line-height: 1.5; color: #444; margin-bottom: 4px; text-align: justify; }
           .garantia-termos li strong { color: #333; }
-          .garantia-assinaturas { margin-top: 40px; display: flex; justify-content: space-between; gap: 40px; }
+          .garantia-assinaturas { margin-top: 20px; display: flex; justify-content: space-between; gap: 30px; }
           .garantia-assinaturas .assinatura { flex: 1; text-align: center; }
-          .garantia-assinaturas .linha-ass { border-top: 2px solid #333; padding-top: 8px; margin-top: 60px; font-size: 14px; font-weight: 600; color: #555; }
-          .garantia-assinaturas .sub-ass { font-size: 12px; color: #999; margin-top: 2px; }
-          .garantia-footer { text-align: center; margin-top: 30px; font-size: 11px; color: #bbb; border-top: 1px solid #eee; padding-top: 12px; }
+          .garantia-assinaturas .linha-ass { border-top: 2px solid #333; padding-top: 5px; margin-top: 35px; font-size: 12px; font-weight: 600; color: #555; }
+          .garantia-assinaturas .sub-ass { font-size: 10px; color: #999; margin-top: 2px; }
+          .garantia-footer { text-align: center; margin-top: 10px; font-size: 9px; color: #bbb; border-top: 1px solid #eee; padding-top: 6px; }
 
           @media print {
             body { padding: 16px; }
@@ -140,15 +139,13 @@ export default function ReciboModal({ open, onClose, produto }: Props) {
           </div>
 
           <div class="garantia-info">
-            <div class="gi-row"><span class="gi-label">Cliente:</span><span class="gi-value">${produto.cliente || '______________________________'}</span></div>
-            <div class="gi-row"><span class="gi-label">Contato:</span><span class="gi-value">${produto.contato || '______________________________'}</span></div>
+            <div class="gi-row"><span class="gi-label">Cliente:</span><span class="gi-value">${produto.cliente || '_______________'}</span></div>
+            <div class="gi-row"><span class="gi-label">Contato:</span><span class="gi-value">${produto.contato || '_______________'}</span></div>
             <div class="gi-row"><span class="gi-label">Modelo:</span><span class="gi-value">${produto.modelo} ${produto.linha}</span></div>
-            <div class="gi-row"><span class="gi-label">Armazenamento:</span><span class="gi-value">${produto.gb}</span></div>
-            <div class="gi-row"><span class="gi-label">Cor:</span><span class="gi-value">${produto.cor}</span></div>
-            <div class="gi-row"><span class="gi-label">Estado:</span><span class="gi-value">${produto.estado}</span></div>
-            <div class="gi-row"><span class="gi-label">IMEI:</span><span class="gi-value" style="font-family:monospace">${produto.imei || 'N/A'}</span></div>
-            <div class="gi-row"><span class="gi-label">Bateria:</span><span class="gi-value">${produto.bateria}%</span></div>
-            <div class="gi-row"><span class="gi-label">Data da Compra:</span><span class="gi-value">${dataVenda}</span></div>
+            <div class="gi-row"><span class="gi-label">GB / Cor:</span><span class="gi-value">${produto.gb} · ${produto.cor}</span></div>
+            <div class="gi-row"><span class="gi-label">Estado:</span><span class="gi-value">${produto.estado} · Bat: ${produto.bateria}%</span></div>
+            <div class="gi-row"><span class="gi-label">IMEI:</span><span class="gi-value" style="font-family:monospace;font-size:10px">${produto.imei || 'N/A'}</span></div>
+            <div class="gi-row"><span class="gi-label">Data:</span><span class="gi-value">${dataVenda}</span></div>
             <div class="gi-row"><span class="gi-label">Valor:</span><span class="gi-value">${produto.valorVenda ? fmt(produto.valorVenda) : '—'}</span></div>
           </div>
 
