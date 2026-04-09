@@ -1,6 +1,8 @@
 'use client';
 import { useRef, useState } from 'react';
 import { Produto, FormaPagamento } from '@/types';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -29,10 +31,8 @@ export default function ReciboModal({ open, onClose, produto }: Props) {
     ? new Date(produto.dataVenda + 'T12:00:00').toLocaleDateString('pt-BR')
     : '—';
 
-  const capturar = async () => {
-    if (!reciboRef.current) return null;
-    const mod = await import('html2canvas');
-    const html2canvas = mod.default || mod;
+  const capturar = () => {
+    if (!reciboRef.current) return Promise.resolve(null);
     return html2canvas(reciboRef.current, {
       scale: 2,
       backgroundColor: '#ffffff',
@@ -46,15 +46,16 @@ export default function ReciboModal({ open, onClose, produto }: Props) {
       setSalvando('jpeg');
       const canvas = await capturar();
       if (!canvas) return;
+      const url = canvas.toDataURL('image/jpeg', 0.95);
       const link = document.createElement('a');
       link.download = `recibo-${produto.codigo}.jpg`;
-      link.href = canvas.toDataURL('image/jpeg', 0.95);
+      link.href = url;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } catch (err) {
-      alert('Erro ao salvar JPEG. Tente novamente.');
-      console.error(err);
+      console.error('Erro JPEG:', err);
+      alert('Erro ao salvar JPEG.');
     } finally {
       setSalvando('');
     }
@@ -65,19 +66,15 @@ export default function ReciboModal({ open, onClose, produto }: Props) {
       setSalvando('pdf');
       const canvas = await capturar();
       if (!canvas) return;
-      const jspdfMod = await import('jspdf');
-      const jsPDF = jspdfMod.jsPDF || jspdfMod.default;
       const imgData = canvas.toDataURL('image/png');
-      const imgW = canvas.width;
-      const imgH = canvas.height;
       const pdfW = 210;
-      const pdfH = (imgH * pdfW) / imgW;
+      const pdfH = (canvas.height * pdfW) / canvas.width;
       const pdf = new jsPDF('p', 'mm', [pdfW, Math.max(pdfH, 297)]);
       pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
       pdf.save(`recibo-${produto.codigo}.pdf`);
     } catch (err) {
-      alert('Erro ao salvar PDF. Tente novamente.');
-      console.error(err);
+      console.error('Erro PDF:', err);
+      alert('Erro ao salvar PDF.');
     } finally {
       setSalvando('');
     }
