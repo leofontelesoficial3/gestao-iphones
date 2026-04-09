@@ -6,9 +6,21 @@ import ProdutoModal from '@/components/ProdutoModal';
 import VendaModal, { ProdutoRecebidoData } from '@/components/VendaModal';
 import FotosModal from '@/components/FotosModal';
 import CodigoModal from '@/components/CodigoModal';
+import Toast from '@/components/Toast';
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+const QrIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="2" width="8" height="8" rx="1" /><rect x="14" y="2" width="8" height="8" rx="1" />
+    <rect x="2" y="14" width="8" height="8" rx="1" /><rect x="14" y="14" width="4" height="4" rx="0.5" />
+    <path d="M18 14h4v4" /><path d="M14 18h4v4" />
+    <rect x="5" y="5" width="2" height="2" rx="0.5" fill="currentColor" stroke="none" />
+    <rect x="17" y="5" width="2" height="2" rx="0.5" fill="currentColor" stroke="none" />
+    <rect x="5" y="17" width="2" height="2" rx="0.5" fill="currentColor" stroke="none" />
+  </svg>
+);
 
 function diasEmEstoque(dataEntrada: string): number {
   const entrada = new Date(dataEntrada + 'T12:00:00');
@@ -29,6 +41,9 @@ export default function EstoquePage() {
   const [verFotos, setVerFotos] = useState<Produto | null>(null);
   const [verCodigo, setVerCodigo] = useState<Produto | null>(null);
   const [nextCodigo, setNextCodigo] = useState(10001);
+  const [toastVenda, setToastVenda] = useState(false);
+  const [toastEstoque, setToastEstoque] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
 
   const load = useCallback(() => {
     setProdutos(getProdutos());
@@ -50,6 +65,8 @@ export default function EstoquePage() {
       updateProduto(editando.id, data);
     } else {
       addProduto(data);
+      setToastMsg(`${data.modelo} ${data.linha} adicionado ao estoque!`);
+      setToastEstoque(true);
     }
     load();
     setEditando(null);
@@ -57,6 +74,7 @@ export default function EstoquePage() {
 
   const handleSaveVenda = (updates: Partial<Produto>, produtoRecebido?: ProdutoRecebidoData) => {
     if (vendendo) {
+      const valor = updates.valorVenda ? fmt(updates.valorVenda) : '';
       updateProduto(vendendo.id, updates);
       if (produtoRecebido) {
         addProduto({
@@ -66,6 +84,8 @@ export default function EstoquePage() {
           fotos: [],
         });
       }
+      setToastMsg(`${vendendo.modelo} ${vendendo.linha} vendido por ${valor}!`);
+      setToastVenda(true);
       load();
       setVendendo(null);
     }
@@ -227,7 +247,7 @@ export default function EstoquePage() {
                 onClick={() => { setVerCodigo(p); setModalCodigo(true); }}
                 className="py-2 px-3 text-sm bg-indigo-100 hover:bg-indigo-200 rounded-lg text-indigo-700 font-medium"
               >
-                QR
+                <QrIcon />
               </button>
               <button
                 onClick={() => { setVerFotos(p); setModalFotos(true); }}
@@ -438,6 +458,18 @@ export default function EstoquePage() {
         open={modalCodigo}
         onClose={() => { setModalCodigo(false); setVerCodigo(null); }}
         produto={verCodigo}
+      />
+      <Toast
+        open={toastVenda}
+        onClose={() => setToastVenda(false)}
+        tipo="venda"
+        mensagem={toastMsg}
+      />
+      <Toast
+        open={toastEstoque}
+        onClose={() => setToastEstoque(false)}
+        tipo="estoque"
+        mensagem={toastMsg}
       />
     </div>
   );
