@@ -103,8 +103,8 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
   const totalComRecebido = totalInformado + valorProdutoRecebido;
   const saldo = parseFloat((valorVenda - totalComRecebido).toFixed(2)); // deve ser 0
 
-  // Lucro: exclui o valor do produto recebido (ele vai pro estoque, não é dinheiro)
-  const lucro = parseFloat((totalInformado - produto.valorCompra - custos - totalAcrescimo).toFixed(2));
+  // Lucro: produto recebido conta como valor de venda (entra no estoque com valor)
+  const lucro = parseFloat((totalComRecebido - produto.valorCompra - custos - totalAcrescimo).toFixed(2));
 
   // ── Handlers ────────────────────────────────────────────────────
   const toggleForma = (f: FormaPagamento) => {
@@ -427,8 +427,8 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
               return (
                 <div key={f.id} className="flex justify-between text-gray-600">
                   <span>{f.icon} {f.label}{acr > 0 ? ` (−${fmt(acr)} taxa)` : ''}</span>
-                  <span className={f.id === 'PRODUTO_RECEBIDO' ? 'text-purple-600' : ''}>
-                    {f.id === 'PRODUTO_RECEBIDO' ? `−${fmt(v)}` : fmt(v)}
+                  <span className={f.id === 'PRODUTO_RECEBIDO' ? 'text-blue-600' : ''}>
+                    {fmt(v)}
                   </span>
                 </div>
               );
@@ -449,12 +449,6 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
                 <div className="flex justify-between text-orange-500">
                   <span>(-) Taxa da maquineta</span>
                   <span>-{fmt(totalAcrescimo)}</span>
-                </div>
-              )}
-              {valorProdutoRecebido > 0 && (
-                <div className="flex justify-between text-purple-600">
-                  <span>(-) Valor produto recebido</span>
-                  <span>-{fmt(valorProdutoRecebido)}</span>
                 </div>
               )}
             </div>
