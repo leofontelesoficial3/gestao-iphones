@@ -71,17 +71,17 @@ export default function VendasPage() {
 
       {/* Resumo */}
       <div className="grid grid-cols-3 gap-2 md:gap-4">
-        <div className="bg-white rounded-xl shadow p-3 md:p-4 border-l-4 border-blue-500">
+        <div className="bg-white rounded-xl shadow p-2.5 md:p-4 border-l-4 border-blue-500 overflow-hidden">
           <p className="text-[10px] md:text-xs text-gray-500">Faturamento</p>
-          <p className="text-base md:text-xl font-bold text-blue-700">{fmt(totalFaturamento)}</p>
+          <p className="text-sm md:text-xl font-bold text-blue-700 truncate">{fmt(totalFaturamento)}</p>
         </div>
-        <div className="bg-white rounded-xl shadow p-3 md:p-4 border-l-4 border-green-500">
+        <div className="bg-white rounded-xl shadow p-2.5 md:p-4 border-l-4 border-green-500 overflow-hidden">
           <p className="text-[10px] md:text-xs text-gray-500">Lucro Total</p>
-          <p className="text-base md:text-xl font-bold text-green-700">{fmt(totalLucro)}</p>
+          <p className="text-sm md:text-xl font-bold text-green-700 truncate">{fmt(totalLucro)}</p>
         </div>
-        <div className="bg-white rounded-xl shadow p-3 md:p-4 border-l-4 border-red-400">
+        <div className="bg-white rounded-xl shadow p-2.5 md:p-4 border-l-4 border-red-400 overflow-hidden">
           <p className="text-[10px] md:text-xs text-gray-500">Custos</p>
-          <p className="text-base md:text-xl font-bold text-red-600">{fmt(totalCustos)}</p>
+          <p className="text-sm md:text-xl font-bold text-red-600 truncate">{fmt(totalCustos)}</p>
         </div>
       </div>
 
