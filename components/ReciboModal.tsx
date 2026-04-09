@@ -57,9 +57,35 @@ export default function ReciboModal({ open, onClose, produto }: Props) {
           .total-label { font-size: 14px; font-weight: 600; }
           .total-value { font-size: 24px; font-weight: 800; }
           .footer { text-align: center; margin-top: 16px; padding-top: 12px; border-top: 1px solid #eee; font-size: 10px; color: #bbb; }
-          @media print { body { padding: 0; } }
+
+          /* Termo de Garantia */
+          .garantia-page { page-break-before: always; padding-top: 24px; }
+          .garantia-header { text-align: center; border-bottom: 3px solid #3B3B4F; padding-bottom: 14px; margin-bottom: 20px; }
+          .garantia-header h2 { font-size: 24px; font-weight: 800; color: #3B3B4F; letter-spacing: 1px; }
+          .garantia-header h3 { font-size: 13px; color: #2E78B7; text-transform: uppercase; letter-spacing: 4px; margin-top: 6px; }
+          .garantia-info { margin-bottom: 20px; }
+          .garantia-info .gi-row { display: flex; border-bottom: 1px solid #e5e5e5; padding: 8px 0; font-size: 15px; }
+          .garantia-info .gi-label { width: 180px; color: #888; font-weight: 500; flex-shrink: 0; }
+          .garantia-info .gi-value { font-weight: 600; color: #333; }
+          .garantia-termos { margin-top: 20px; }
+          .garantia-termos h4 { font-size: 18px; font-weight: 700; color: #3B3B4F; margin-bottom: 14px; text-align: center; text-transform: uppercase; letter-spacing: 2px; border-bottom: 2px solid #2E78B7; padding-bottom: 8px; }
+          .garantia-termos ol { padding-left: 24px; }
+          .garantia-termos li { font-size: 15px; line-height: 1.8; color: #444; margin-bottom: 10px; text-align: justify; }
+          .garantia-termos li strong { color: #333; }
+          .garantia-assinaturas { margin-top: 40px; display: flex; justify-content: space-between; gap: 40px; }
+          .garantia-assinaturas .assinatura { flex: 1; text-align: center; }
+          .garantia-assinaturas .linha-ass { border-top: 2px solid #333; padding-top: 8px; margin-top: 60px; font-size: 14px; font-weight: 600; color: #555; }
+          .garantia-assinaturas .sub-ass { font-size: 12px; color: #999; margin-top: 2px; }
+          .garantia-footer { text-align: center; margin-top: 30px; font-size: 11px; color: #bbb; border-top: 1px solid #eee; padding-top: 12px; }
+
+          @media print {
+            body { padding: 16px; }
+            .garantia-page { page-break-before: always; }
+          }
         </style>
       </head><body>
+
+        <!-- PÁGINA 1: RECIBO -->
         <div class="header">
           <div class="brand">iPHONES <span>FORTALEZA</span></div>
           <div class="subtitle">Comprovante de Venda</div>
@@ -105,6 +131,67 @@ export default function ReciboModal({ open, onClose, produto }: Props) {
           <div>Obrigado pela preferência!</div>
           <div style="margin-top:4px">iPhones Fortaleza® — Todos os direitos reservados</div>
         </div>
+
+        <!-- PÁGINA 2: TERMO DE GARANTIA -->
+        <div class="garantia-page">
+          <div class="garantia-header">
+            <div class="brand">iPHONES <span>FORTALEZA</span></div>
+            <h3>Termo de Garantia de iPhones</h3>
+          </div>
+
+          <div class="garantia-info">
+            <div class="gi-row"><span class="gi-label">Cliente:</span><span class="gi-value">${produto.cliente || '______________________________'}</span></div>
+            <div class="gi-row"><span class="gi-label">Contato:</span><span class="gi-value">${produto.contato || '______________________________'}</span></div>
+            <div class="gi-row"><span class="gi-label">Modelo:</span><span class="gi-value">${produto.modelo} ${produto.linha}</span></div>
+            <div class="gi-row"><span class="gi-label">Armazenamento:</span><span class="gi-value">${produto.gb}</span></div>
+            <div class="gi-row"><span class="gi-label">Cor:</span><span class="gi-value">${produto.cor}</span></div>
+            <div class="gi-row"><span class="gi-label">Estado:</span><span class="gi-value">${produto.estado}</span></div>
+            <div class="gi-row"><span class="gi-label">IMEI:</span><span class="gi-value" style="font-family:monospace">${produto.imei || 'N/A'}</span></div>
+            <div class="gi-row"><span class="gi-label">Bateria:</span><span class="gi-value">${produto.bateria}%</span></div>
+            <div class="gi-row"><span class="gi-label">Data da Compra:</span><span class="gi-value">${dataVenda}</span></div>
+            <div class="gi-row"><span class="gi-label">Valor:</span><span class="gi-value">${produto.valorVenda ? fmt(produto.valorVenda) : '—'}</span></div>
+          </div>
+
+          <div class="garantia-termos">
+            <h4>Termos e Condições da Garantia</h4>
+            <ol>
+              <li><strong>Prazo de Garantia:</strong> O aparelho possui garantia de <strong>90 (noventa) dias corridos</strong> a partir da data da compra, conforme previsto no Código de Defesa do Consumidor (Art. 26, II).</li>
+              <li><strong>Cobertura:</strong> A garantia cobre exclusivamente <strong>defeitos de funcionamento de hardware</strong>, incluindo: placa lógica, botões físicos, alto-falante, microfone, câmeras, sensor de proximidade, carregamento e conectividade (Wi-Fi, Bluetooth, rede celular).</li>
+              <li><strong>Exclusões — A garantia NÃO cobre:</strong>
+                <br>a) Danos causados por <strong>queda, impacto, pressão ou esmagamento</strong>;
+                <br>b) Danos causados por <strong>contato com líquidos</strong> (água, suor, chuva, etc.);
+                <br>c) <strong>Tela, carcaça e peças estéticas</strong> — riscos, trincas, amassados;
+                <br>d) <strong>Bateria</strong> — desgaste natural de bateria não é considerado defeito;
+                <br>e) Danos causados por <strong>mau uso, negligência ou tentativa de reparo</strong> por terceiros não autorizados;
+                <br>f) Danos causados por <strong>uso de acessórios não originais</strong> (carregadores, cabos);
+                <br>g) Problemas de <strong>software</strong>, incluindo atualizações do sistema operacional, jailbreak ou instalação de aplicativos de terceiros;
+                <br>h) <strong>Componentes já trocados</strong> informados no ato da venda.
+              </li>
+              <li><strong>Condições para acionar a garantia:</strong> O cliente deve apresentar este comprovante/termo e o aparelho deve estar nas mesmas condições em que foi vendido, sem sinais de violação, abertura ou modificação não autorizada.</li>
+              <li><strong>Análise Técnica:</strong> Ao acionar a garantia, o aparelho passará por análise técnica em até <strong>30 (trinta) dias úteis</strong>. Caso o defeito seja coberto, o reparo ou substituição será realizado sem custo. Caso o defeito não seja coberto, o cliente será notificado e poderá optar pelo reparo pago.</li>
+              <li><strong>Aparelhos Seminovos:</strong> Por se tratar de aparelhos seminovos, pequenas marcas de uso (micro-riscos na tela ou carcaça) são consideradas normais e não configuram defeito.</li>
+              <li><strong>Produto Recebido em Troca:</strong> Aparelhos recebidos como forma de pagamento parcial são avaliados no ato da negociação e não possuem garantia adicional após a troca.</li>
+              <li><strong>Foro:</strong> Fica eleito o foro da comarca de <strong>Fortaleza/CE</strong> para dirimir quaisquer dúvidas ou litígios decorrentes deste termo.</li>
+            </ol>
+          </div>
+
+          <div class="garantia-assinaturas">
+            <div class="assinatura">
+              <div class="linha-ass">iPhones Fortaleza</div>
+              <div class="sub-ass">Vendedor</div>
+            </div>
+            <div class="assinatura">
+              <div class="linha-ass">${produto.cliente || 'Cliente'}</div>
+              <div class="sub-ass">Comprador</div>
+            </div>
+          </div>
+
+          <div class="garantia-footer">
+            <div>iPhones Fortaleza® — Todos os direitos reservados</div>
+            <div style="margin-top:4px">Documento gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
+          </div>
+        </div>
+
       </body></html>
     `);
     janela.document.close();
