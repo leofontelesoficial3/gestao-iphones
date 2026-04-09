@@ -1,5 +1,5 @@
 'use client';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Produto, FormaPagamento } from '@/types';
 
 const fmt = (v: number) =>
@@ -21,6 +21,7 @@ interface Props {
 
 export default function ReciboModal({ open, onClose, produto }: Props) {
   const reciboRef = useRef<HTMLDivElement>(null);
+  const [salvando, setSalvando] = useState('');
 
   if (!open || !produto || produto.status !== 'VENDIDO') return null;
 
@@ -28,38 +29,58 @@ export default function ReciboModal({ open, onClose, produto }: Props) {
     ? new Date(produto.dataVenda + 'T12:00:00').toLocaleDateString('pt-BR')
     : '—';
 
-  const handleSaveJpeg = async () => {
-    if (!reciboRef.current) return;
-    const html2canvas = (await import('html2canvas')).default;
-    const canvas = await html2canvas(reciboRef.current, {
+  const capturar = async () => {
+    if (!reciboRef.current) return null;
+    const mod = await import('html2canvas');
+    const html2canvas = mod.default || mod;
+    return html2canvas(reciboRef.current, {
       scale: 2,
       backgroundColor: '#ffffff',
       useCORS: true,
+      logging: false,
     });
-    const link = document.createElement('a');
-    link.download = `recibo-${produto.codigo}-${produto.dataVenda || 'venda'}.jpg`;
-    link.href = canvas.toDataURL('image/jpeg', 0.95);
-    link.click();
+  };
+
+  const handleSaveJpeg = async () => {
+    try {
+      setSalvando('jpeg');
+      const canvas = await capturar();
+      if (!canvas) return;
+      const link = document.createElement('a');
+      link.download = `recibo-${produto.codigo}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.95);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      alert('Erro ao salvar JPEG. Tente novamente.');
+      console.error(err);
+    } finally {
+      setSalvando('');
+    }
   };
 
   const handleSavePdf = async () => {
-    if (!reciboRef.current) return;
-    const html2canvas = (await import('html2canvas')).default;
-    const { jsPDF } = await import('jspdf');
-    const canvas = await html2canvas(reciboRef.current, {
-      scale: 2,
-      backgroundColor: '#ffffff',
-      useCORS: true,
-    });
-    const imgData = canvas.toDataURL('image/png');
-    const imgW = canvas.width;
-    const imgH = canvas.height;
-    // A4 portrait: 210mm x 297mm
-    const pdfW = 210;
-    const pdfH = (imgH * pdfW) / imgW;
-    const pdf = new jsPDF('p', 'mm', [pdfW, Math.max(pdfH, 297)]);
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
-    pdf.save(`recibo-${produto.codigo}-${produto.dataVenda || 'venda'}.pdf`);
+    try {
+      setSalvando('pdf');
+      const canvas = await capturar();
+      if (!canvas) return;
+      const jspdfMod = await import('jspdf');
+      const jsPDF = jspdfMod.jsPDF || jspdfMod.default;
+      const imgData = canvas.toDataURL('image/png');
+      const imgW = canvas.width;
+      const imgH = canvas.height;
+      const pdfW = 210;
+      const pdfH = (imgH * pdfW) / imgW;
+      const pdf = new jsPDF('p', 'mm', [pdfW, Math.max(pdfH, 297)]);
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
+      pdf.save(`recibo-${produto.codigo}.pdf`);
+    } catch (err) {
+      alert('Erro ao salvar PDF. Tente novamente.');
+      console.error(err);
+    } finally {
+      setSalvando('');
+    }
   };
 
   return (
@@ -197,17 +218,19 @@ export default function ReciboModal({ open, onClose, produto }: Props) {
         <div className="px-6 pb-6 flex gap-3">
           <button
             onClick={handleSavePdf}
-            className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white"
+            disabled={!!salvando}
+            className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
             style={{ background: '#D94070' }}
           >
-            Salvar PDF
+            {salvando === 'pdf' ? 'Gerando...' : 'Salvar PDF'}
           </button>
           <button
             onClick={handleSaveJpeg}
-            className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white"
+            disabled={!!salvando}
+            className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
             style={{ background: '#2E78B7' }}
           >
-            Salvar JPEG
+            {salvando === 'jpeg' ? 'Gerando...' : 'Salvar JPEG'}
           </button>
           <button
             onClick={onClose}
