@@ -32,13 +32,16 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center px-4"
       style={{ background: 'linear-gradient(135deg, #2a2a3d 0%, #1a2a40 50%, #2a2a3d 100%)' }}>
       <div className="w-full max-w-sm">
-        {/* Logo */}
+        {/* Logo + Nome */}
         <div className="text-center mb-8">
-          <div className="inline-block bg-white rounded-2xl p-4 shadow-xl mb-4">
-            <Image src="/logo.jpg" alt="iPhones Fortaleza" width={180} height={80}
+          <div className="inline-block bg-white rounded-2xl p-5 shadow-xl mb-5">
+            <Image src="/logo.jpg" alt="iPhones Fortaleza" width={220} height={100}
               className="object-contain" priority />
           </div>
-          <p className="text-gray-400 text-sm mt-2">Faça login para acessar o sistema</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-white">
+            iPhones <span style={{ color: '#2E78B7' }}>Fortaleza</span>
+          </h1>
+          <p className="text-gray-400 text-sm mt-2">Sistema de Gestão</p>
         </div>
 
         {/* Card de login */}

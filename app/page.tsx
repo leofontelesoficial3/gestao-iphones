@@ -62,7 +62,9 @@ export default function Dashboard() {
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h1 className="text-xl md:text-2xl font-bold text-gray-800">Dashboard</h1>
+        <h1 className="text-xl md:text-2xl font-bold" style={{ color: '#3B3B4F' }}>
+          Dashboard — <span style={{ color: '#2E78B7' }}>iPhones Fortaleza</span>
+        </h1>
         <select
           className="input !w-full sm:!w-auto text-sm"
           value={mesSel}

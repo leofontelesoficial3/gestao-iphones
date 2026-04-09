@@ -25,10 +25,18 @@ export default function Navbar() {
       {/* Desktop: topo */}
       <nav className="hidden md:flex text-white px-6 py-3 items-center gap-8 shadow-lg"
         style={{ background: '#2a2a3d' }}>
-        <div className="bg-white rounded-lg px-2 py-1">
-          <Image src="/logo.jpg" alt="iPhones Fortaleza" width={130} height={40} className="object-contain h-8 w-auto" />
+        <div className="flex items-center gap-3">
+          <div className="bg-white rounded-lg px-2 py-1">
+            <Image src="/logo.jpg" alt="iPhones Fortaleza" width={130} height={40} className="object-contain h-8 w-auto" />
+          </div>
+          <div className="leading-tight">
+            <p className="text-base font-extrabold text-white tracking-tight">
+              iPHONES <span style={{ color: '#2E78B7' }}>FORTALEZA</span>
+            </p>
+            <p className="text-[10px] text-gray-500 tracking-widest uppercase">Sistema de Gestão</p>
+          </div>
         </div>
-        <div className="flex gap-2 flex-1">
+        <div className="flex gap-2 flex-1 ml-4">
           {links.map(link => (
             <Link
               key={link.href}
@@ -58,8 +66,15 @@ export default function Navbar() {
       {/* Mobile: header */}
       <header className="md:hidden text-white px-4 py-3 shadow-lg flex items-center justify-between"
         style={{ background: '#2a2a3d' }}>
-        <div className="bg-white rounded-lg px-2 py-1">
-          <Image src="/logo.jpg" alt="iPhones Fortaleza" width={110} height={32} className="object-contain h-7 w-auto" />
+        <div className="flex items-center gap-2.5">
+          <div className="bg-white rounded-lg px-1.5 py-0.5">
+            <Image src="/logo.jpg" alt="iPhones Fortaleza" width={90} height={28} className="object-contain h-6 w-auto" />
+          </div>
+          <div className="leading-tight">
+            <p className="text-sm font-extrabold text-white tracking-tight">
+              iPHONES <span style={{ color: '#2E78B7' }}>FORTALEZA</span>
+            </p>
+          </div>
         </div>
         <button
           onClick={handleLogout}
