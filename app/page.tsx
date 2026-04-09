@@ -4,6 +4,7 @@ import { getProdutos } from '@/lib/storage';
 import { Produto } from '@/types';
 import StatsCard from '@/components/StatsCard';
 import Link from 'next/link';
+import { useAuth } from '@/components/AuthProvider';
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -14,8 +15,11 @@ const MESES = [
 ];
 
 export default function Dashboard() {
+  const { isAdmin } = useAuth();
   const [todos, setTodos] = useState<Produto[]>([]);
   const [mesSel, setMesSel] = useState('TODOS');
+  const [ocultarValores, setOcultarValores] = useState(false);
+  const mostrar = !ocultarValores;
 
   useEffect(() => {
     setTodos(getProdutos());
@@ -65,43 +69,55 @@ export default function Dashboard() {
         <h1 className="text-xl md:text-2xl font-bold" style={{ color: '#3B3B4F' }}>
           Dashboard — <span style={{ color: '#2E78B7' }}>iPhones Fortaleza</span>
         </h1>
-        <select
-          className="input !w-full sm:!w-auto text-sm"
-          value={mesSel}
-          onChange={e => setMesSel(e.target.value)}
-        >
-          <option value="TODOS">Todos os meses</option>
-          {mesesDisponiveis.map(m => (
-            <option key={m} value={m}>{formatMesLabel(m)}</option>
-          ))}
-        </select>
+        <div className="flex gap-2 flex-wrap">
+          <select
+            className="input !w-auto text-sm"
+            value={mesSel}
+            onChange={e => setMesSel(e.target.value)}
+          >
+            <option value="TODOS">Todos os meses</option>
+            {mesesDisponiveis.map(m => (
+              <option key={m} value={m}>{formatMesLabel(m)}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => setOcultarValores(prev => !prev)}
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              ocultarValores
+                ? 'bg-red-100 text-red-600 border border-red-200'
+                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            {ocultarValores ? '🔒 Valores ocultos' : '👁 Ocultar valores'}
+          </button>
+        </div>
       </div>
 
       {/* Cards de estatísticas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatsCard
           title="Faturamento"
-          value={fmt(stats.totalFaturamento)}
+          value={mostrar ? fmt(stats.totalFaturamento) : '••••••'}
           sub={mesSel === 'TODOS' ? 'Todas as vendas' : formatMesLabel(mesSel)}
           color="blue"
         />
         <StatsCard
           title="Lucro"
-          value={fmt(stats.totalLucro)}
+          value={mostrar ? fmt(stats.totalLucro) : '••••••'}
           sub={`${stats.qtdVendidos} aparelhos vendidos`}
           color="green"
         />
         <StatsCard
           title="Em Estoque"
           value={`${stats.qtdEmEstoque} aparelhos`}
-          sub={`Valor: ${fmt(stats.valorEmEstoque)}`}
+          sub={mostrar ? `Valor: ${fmt(stats.valorEmEstoque)}` : ''}
           color="yellow"
         />
         <StatsCard
           title="Ticket Médio"
-          value={stats.qtdVendidos > 0
-            ? fmt(stats.totalFaturamento / stats.qtdVendidos)
-            : 'R$ 0'}
+          value={mostrar
+            ? (stats.qtdVendidos > 0 ? fmt(stats.totalFaturamento / stats.qtdVendidos) : 'R$ 0')
+            : '••••••'}
           sub="Por aparelho vendido"
           color="purple"
         />
@@ -127,8 +143,8 @@ export default function Dashboard() {
                   <th className="text-left py-2 px-2 text-gray-500 font-medium">Modelo</th>
                   <th className="text-left py-2 px-2 text-gray-500 font-medium">GB / Cor</th>
                   <th className="text-left py-2 px-2 text-gray-500 font-medium">Data Venda</th>
-                  <th className="text-right py-2 px-2 text-gray-500 font-medium">Venda</th>
-                  <th className="text-right py-2 px-2 text-gray-500 font-medium">Lucro</th>
+                  {mostrar && <th className="text-right py-2 px-2 text-gray-500 font-medium">Venda</th>}
+                  {mostrar && <th className="text-right py-2 px-2 text-gray-500 font-medium">Lucro</th>}
                 </tr>
               </thead>
               <tbody>
@@ -143,14 +159,18 @@ export default function Dashboard() {
                         ? new Date(p.dataVenda + 'T12:00:00').toLocaleDateString('pt-BR')
                         : '-'}
                     </td>
-                    <td className="py-2 px-2 text-right font-semibold">
-                      {p.valorVenda ? fmt(p.valorVenda) : '-'}
-                    </td>
-                    <td className={`py-2 px-2 text-right font-semibold ${
-                      (p.lucro ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {p.lucro !== undefined ? fmt(p.lucro) : '-'}
-                    </td>
+                    {mostrar && (
+                      <td className="py-2 px-2 text-right font-semibold">
+                        {p.valorVenda ? fmt(p.valorVenda) : '-'}
+                      </td>
+                    )}
+                    {mostrar && (
+                      <td className={`py-2 px-2 text-right font-semibold ${
+                        (p.lucro ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {p.lucro !== undefined ? fmt(p.lucro) : '-'}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
