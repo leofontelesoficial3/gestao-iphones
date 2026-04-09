@@ -129,8 +129,123 @@ export default function EstoquePage() {
         <span className="text-sm text-gray-400 self-center">{filtrados.length} resultado(s)</span>
       </div>
 
-      {/* Tabela */}
-      <div className="bg-white rounded-2xl shadow overflow-hidden">
+      {/* Mobile: Cards */}
+      <div className="md:hidden flex flex-col gap-3">
+        {filtrados.length === 0 && (
+          <p className="py-10 text-center text-gray-400">Nenhum produto encontrado.</p>
+        )}
+        {filtrados.map(p => (
+          <div key={p.id} className="bg-white rounded-xl shadow p-4 space-y-3">
+            {/* Cabeçalho do card */}
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="font-bold text-gray-800">
+                  {p.modelo} <span className="text-gray-400 font-normal text-sm">{p.linha}</span>
+                </p>
+                <p className="text-sm text-gray-500">{p.gb} · {p.cor}</p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+                  p.status === 'EM_ESTOQUE' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                }`}>
+                  {p.status === 'EM_ESTOQUE' ? 'Estoque' : 'Vendido'}
+                </span>
+              </div>
+            </div>
+
+            {/* Info */}
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <span className="text-gray-400 text-xs">Código</span>
+                <p className="font-mono text-gray-600">{p.codigo}</p>
+              </div>
+              <div>
+                <span className="text-gray-400 text-xs">Estado / Bateria</span>
+                <p>
+                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+                    p.estado === 'NOVO' ? 'bg-purple-100 text-purple-700' : 'bg-yellow-100 text-yellow-700'
+                  }`}>{p.estado}</span>
+                  <span className="ml-1 text-gray-500">{p.bateria}%</span>
+                </p>
+              </div>
+              <div>
+                <span className="text-gray-400 text-xs">Compra</span>
+                <p className="font-semibold text-gray-700">{fmt(p.valorCompra)}</p>
+              </div>
+              {p.status === 'VENDIDO' ? (
+                <div>
+                  <span className="text-gray-400 text-xs">Venda</span>
+                  <p className="font-semibold">{p.valorVenda ? fmt(p.valorVenda) : '—'}</p>
+                </div>
+              ) : (
+                <div>
+                  <span className="text-gray-400 text-xs">IMEI</span>
+                  <p className="font-mono text-xs text-gray-500 truncate">{p.imei || '—'}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Lucro e data (só vendidos) */}
+            {p.status === 'VENDIDO' && (
+              <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 text-sm">
+                <div>
+                  <span className="text-gray-400 text-xs">Data Venda</span>
+                  <p className="text-gray-600">
+                    {p.dataVenda ? new Date(p.dataVenda + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-gray-400 text-xs">Lucro</span>
+                  <p className={`font-bold ${(p.lucro ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {p.lucro !== undefined ? fmt(p.lucro) : '—'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Botões de ação */}
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => { setVerFotos(p); setModalFotos(true); }}
+                className="flex-1 py-2 text-sm bg-purple-100 hover:bg-purple-200 rounded-lg text-purple-700 font-medium"
+              >
+                📷 Fotos{(p.fotos?.length ?? 0) > 0 ? ` (${p.fotos!.length})` : ''}
+              </button>
+              <button
+                onClick={() => { setEditando(p); setModalProduto(true); }}
+                className="flex-1 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 font-medium"
+              >
+                Editar
+              </button>
+              {p.status === 'EM_ESTOQUE' && (
+                <button
+                  onClick={() => { setVendendo(p); setModalVenda(true); }}
+                  className="flex-1 py-2 text-sm bg-green-100 hover:bg-green-200 rounded-lg text-green-700 font-medium"
+                >
+                  Vender
+                </button>
+              )}
+              {p.status === 'VENDIDO' && (
+                <button
+                  onClick={() => handleDesfazerVenda(p)}
+                  className="flex-1 py-2 text-sm bg-yellow-100 hover:bg-yellow-200 rounded-lg text-yellow-700 font-medium"
+                >
+                  Desfazer
+                </button>
+              )}
+              <button
+                onClick={() => handleDelete(p.id)}
+                className="py-2 px-3 text-sm bg-red-100 hover:bg-red-200 rounded-lg text-red-600 font-medium"
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: Tabela */}
+      <div className="hidden md:block bg-white rounded-2xl shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">

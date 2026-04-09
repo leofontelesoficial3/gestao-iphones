@@ -1,42 +1,90 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { getStats, getProdutos } from '@/lib/storage';
-import { Stats, Produto } from '@/types';
+import { useEffect, useState, useMemo } from 'react';
+import { getProdutos } from '@/lib/storage';
+import { Produto } from '@/types';
 import StatsCard from '@/components/StatsCard';
 import Link from 'next/link';
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+const MESES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+
 export default function Dashboard() {
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [ultimas, setUltimas] = useState<Produto[]>([]);
+  const [todos, setTodos] = useState<Produto[]>([]);
+  const [mesSel, setMesSel] = useState('TODOS');
 
   useEffect(() => {
-    setStats(getStats());
-    const vendidos = getProdutos()
-      .filter(p => p.status === 'VENDIDO')
-      .sort((a, b) => (b.dataVenda ?? '').localeCompare(a.dataVenda ?? ''))
-      .slice(0, 8);
-    setUltimas(vendidos);
+    setTodos(getProdutos());
   }, []);
 
-  if (!stats) return null;
+  // Meses disponíveis com vendas
+  const mesesDisponiveis = useMemo(() => {
+    const set = new Set<string>();
+    todos.filter(p => p.status === 'VENDIDO' && p.dataVenda).forEach(p => {
+      const [ano, mes] = p.dataVenda!.split('-');
+      set.add(`${ano}-${mes}`);
+    });
+    return Array.from(set).sort().reverse();
+  }, [todos]);
+
+  // Produtos filtrados por mês
+  const vendidos = useMemo(() => {
+    return todos
+      .filter(p => p.status === 'VENDIDO')
+      .filter(p => {
+        if (mesSel === 'TODOS') return true;
+        return p.dataVenda?.startsWith(mesSel);
+      })
+      .sort((a, b) => (b.dataVenda ?? '').localeCompare(a.dataVenda ?? ''));
+  }, [todos, mesSel]);
+
+  const emEstoque = todos.filter(p => p.status === 'EM_ESTOQUE');
+
+  const stats = {
+    totalFaturamento: vendidos.reduce((s, p) => s + (p.valorVenda ?? 0), 0),
+    totalLucro: vendidos.reduce((s, p) => s + (p.lucro ?? 0), 0),
+    qtdVendidos: vendidos.length,
+    qtdEmEstoque: emEstoque.length,
+    valorEmEstoque: emEstoque.reduce((s, p) => s + p.valorCompra, 0),
+  };
+
+  const ultimas = vendidos.slice(0, 8);
+
+  const formatMesLabel = (key: string) => {
+    const [ano, mes] = key.split('-');
+    return `${MESES[parseInt(mes) - 1]} ${ano}`;
+  };
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">Dashboard</h1>
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h1 className="text-xl md:text-2xl font-bold text-gray-800">Dashboard</h1>
+        <select
+          className="input !w-full sm:!w-auto text-sm"
+          value={mesSel}
+          onChange={e => setMesSel(e.target.value)}
+        >
+          <option value="TODOS">Todos os meses</option>
+          {mesesDisponiveis.map(m => (
+            <option key={m} value={m}>{formatMesLabel(m)}</option>
+          ))}
+        </select>
+      </div>
 
       {/* Cards de estatísticas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatsCard
-          title="Faturamento Total"
+          title="Faturamento"
           value={fmt(stats.totalFaturamento)}
-          sub="Soma de todas as vendas"
+          sub={mesSel === 'TODOS' ? 'Todas as vendas' : formatMesLabel(mesSel)}
           color="blue"
         />
         <StatsCard
-          title="Lucro Total"
+          title="Lucro"
           value={fmt(stats.totalLucro)}
           sub={`${stats.qtdVendidos} aparelhos vendidos`}
           color="green"
@@ -60,13 +108,15 @@ export default function Dashboard() {
       {/* Últimas vendas */}
       <div className="bg-white rounded-2xl shadow p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Últimas Vendas</h2>
+          <h2 className="text-lg font-semibold text-gray-800">
+            {mesSel === 'TODOS' ? 'Últimas Vendas' : `Vendas de ${formatMesLabel(mesSel)}`}
+          </h2>
           <Link href="/vendas" className="text-sm text-blue-600 hover:underline">
             Ver todas →
           </Link>
         </div>
         {ultimas.length === 0 ? (
-          <p className="text-gray-400 text-sm">Nenhuma venda registrada.</p>
+          <p className="text-gray-400 text-sm">Nenhuma venda {mesSel !== 'TODOS' ? 'neste mês' : 'registrada'}.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">

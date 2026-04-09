@@ -1,14 +1,20 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Produto } from '@/types';
 import { getProdutos } from '@/lib/storage';
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
+const MESES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+
 export default function VendasPage() {
   const [vendas, setVendas] = useState<Produto[]>([]);
   const [busca, setBusca] = useState('');
+  const [mesSel, setMesSel] = useState('TODOS');
 
   useEffect(() => {
     const todos = getProdutos();
@@ -18,10 +24,26 @@ export default function VendasPage() {
     setVendas(v);
   }, []);
 
+  const mesesDisponiveis = useMemo(() => {
+    const set = new Set<string>();
+    vendas.filter(p => p.dataVenda).forEach(p => {
+      const [ano, mes] = p.dataVenda!.split('-');
+      set.add(`${ano}-${mes}`);
+    });
+    return Array.from(set).sort().reverse();
+  }, [vendas]);
+
+  const formatMesLabel = (key: string) => {
+    const [ano, mes] = key.split('-');
+    return `${MESES[parseInt(mes) - 1]} ${ano}`;
+  };
+
   const filtradas = vendas.filter(p => {
+    const matchMes = mesSel === 'TODOS' || p.dataVenda?.startsWith(mesSel);
     const q = busca.toLowerCase();
-    return !q || [p.modelo, p.linha, p.cor, p.cliente, p.contato, String(p.codigo)]
+    const matchQ = !q || [p.modelo, p.linha, p.cor, p.cliente, p.contato, String(p.codigo)]
       .some(v => v?.toLowerCase().includes(q));
+    return matchMes && matchQ;
   });
 
   const totalFaturamento = filtradas.reduce((s, p) => s + (p.valorVenda ?? 0), 0);
@@ -30,21 +52,36 @@ export default function VendasPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-gray-800">Vendas</h1>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-2xl font-bold text-gray-800">Vendas</h1>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500">Mês:</span>
+          <select
+            className="input !w-auto text-sm"
+            value={mesSel}
+            onChange={e => setMesSel(e.target.value)}
+          >
+            <option value="TODOS">Todos os meses</option>
+            {mesesDisponiveis.map(m => (
+              <option key={m} value={m}>{formatMesLabel(m)}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
       {/* Resumo */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl shadow p-4 border-l-4 border-blue-500">
-          <p className="text-xs text-gray-500">Faturamento</p>
-          <p className="text-xl font-bold text-blue-700">{fmt(totalFaturamento)}</p>
+      <div className="grid grid-cols-3 gap-2 md:gap-4">
+        <div className="bg-white rounded-xl shadow p-3 md:p-4 border-l-4 border-blue-500">
+          <p className="text-[10px] md:text-xs text-gray-500">Faturamento</p>
+          <p className="text-base md:text-xl font-bold text-blue-700">{fmt(totalFaturamento)}</p>
         </div>
-        <div className="bg-white rounded-xl shadow p-4 border-l-4 border-green-500">
-          <p className="text-xs text-gray-500">Lucro Total</p>
-          <p className="text-xl font-bold text-green-700">{fmt(totalLucro)}</p>
+        <div className="bg-white rounded-xl shadow p-3 md:p-4 border-l-4 border-green-500">
+          <p className="text-[10px] md:text-xs text-gray-500">Lucro Total</p>
+          <p className="text-base md:text-xl font-bold text-green-700">{fmt(totalLucro)}</p>
         </div>
-        <div className="bg-white rounded-xl shadow p-4 border-l-4 border-red-400">
-          <p className="text-xs text-gray-500">Total de Custos</p>
-          <p className="text-xl font-bold text-red-600">{fmt(totalCustos)}</p>
+        <div className="bg-white rounded-xl shadow p-3 md:p-4 border-l-4 border-red-400">
+          <p className="text-[10px] md:text-xs text-gray-500">Custos</p>
+          <p className="text-base md:text-xl font-bold text-red-600">{fmt(totalCustos)}</p>
         </div>
       </div>
 
@@ -53,15 +90,97 @@ export default function VendasPage() {
         <input
           type="text"
           placeholder="Buscar modelo, cliente, contato..."
-          className="input max-w-sm"
+          className="input flex-1 md:max-w-sm"
           value={busca}
           onChange={e => setBusca(e.target.value)}
         />
-        <span className="text-sm text-gray-400">{filtradas.length} venda(s)</span>
+        <span className="text-sm text-gray-400 whitespace-nowrap">{filtradas.length} venda(s)</span>
       </div>
 
-      {/* Tabela */}
-      <div className="bg-white rounded-2xl shadow overflow-hidden">
+      {/* Mobile: Cards */}
+      <div className="md:hidden flex flex-col gap-3">
+        {filtradas.length === 0 && (
+          <p className="py-10 text-center text-gray-400">Nenhuma venda encontrada.</p>
+        )}
+        {filtradas.map(p => (
+          <div key={p.id} className="bg-white rounded-xl shadow p-4 space-y-2">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="font-bold text-gray-800">
+                  {p.modelo} <span className="text-gray-400 font-normal text-sm">{p.linha}</span>
+                </p>
+                <p className="text-sm text-gray-500">{p.gb} · {p.cor}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-gray-400">
+                  {p.dataVenda ? new Date(p.dataVenda + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}
+                </p>
+                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold mt-1 ${
+                  p.estado === 'NOVO' ? 'bg-purple-100 text-purple-700' : 'bg-yellow-100 text-yellow-700'
+                }`}>{p.estado}</span>
+              </div>
+            </div>
+
+            {(p.cliente || p.contato) && (
+              <div className="text-sm text-gray-500">
+                {p.cliente && <span>{p.cliente}</span>}
+                {p.contato && <span className="ml-2 text-xs text-gray-400">{p.contato}</span>}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+              <div className="text-center">
+                <p className="text-[10px] text-gray-400">Compra</p>
+                <p className="text-sm font-semibold text-gray-600">{fmt(p.valorCompra)}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-gray-400">Venda</p>
+                <p className="text-sm font-bold">{p.valorVenda ? fmt(p.valorVenda) : '—'}</p>
+              </div>
+              {p.custos ? (
+                <div className="text-center">
+                  <p className="text-[10px] text-gray-400">Custos</p>
+                  <p className="text-sm font-semibold text-red-500">{fmt(p.custos)}</p>
+                </div>
+              ) : null}
+              <div className="text-center">
+                <p className="text-[10px] text-gray-400">Lucro</p>
+                <p className={`text-sm font-bold ${(p.lucro ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {p.lucro !== undefined ? fmt(p.lucro) : '—'}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {/* Totais mobile */}
+        {filtradas.length > 0 && (
+          <div className="bg-gray-800 text-white rounded-xl shadow p-4">
+            <p className="text-xs text-gray-400 mb-2 font-semibold">TOTAIS</p>
+            <div className="flex justify-between">
+              <div className="text-center">
+                <p className="text-[10px] text-gray-400">Compra</p>
+                <p className="text-sm font-bold">{fmt(filtradas.reduce((s, p) => s + p.valorCompra, 0))}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-gray-400">Faturamento</p>
+                <p className="text-sm font-bold text-blue-400">{fmt(totalFaturamento)}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-gray-400">Custos</p>
+                <p className="text-sm font-bold text-red-400">{fmt(totalCustos)}</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[10px] text-gray-400">Lucro</p>
+                <p className="text-sm font-bold text-green-400">{fmt(totalLucro)}</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: Tabela */}
+      <div className="hidden md:block bg-white rounded-2xl shadow overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
