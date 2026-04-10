@@ -89,6 +89,7 @@ export default function SitePage() {
           {/* Desktop links */}
           <div className="hidden md:flex items-center gap-6">
             <a href="#funcionalidades" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Funcionalidades</a>
+            <a href="#planos" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Planos</a>
             <a href="#diferenciais" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Diferenciais</a>
             <a href="#depoimentos" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Depoimentos</a>
             <a href="#contato" className="text-sm text-gray-600 hover:text-gray-900 transition-colors">Contato</a>
@@ -107,6 +108,7 @@ export default function SitePage() {
         {menuOpen && (
           <div className="md:hidden bg-white border-t border-gray-100 px-4 pb-4 flex flex-col gap-3">
             <a href="#funcionalidades" onClick={() => setMenuOpen(false)} className="py-2 text-gray-600">Funcionalidades</a>
+            <a href="#planos" onClick={() => setMenuOpen(false)} className="py-2 text-gray-600">Planos</a>
             <a href="#diferenciais" onClick={() => setMenuOpen(false)} className="py-2 text-gray-600">Diferenciais</a>
             <a href="#depoimentos" onClick={() => setMenuOpen(false)} className="py-2 text-gray-600">Depoimentos</a>
             <a href="#contato" onClick={() => setMenuOpen(false)} className="py-2 text-gray-600">Contato</a>
@@ -183,6 +185,154 @@ export default function SitePage() {
                 <p className="text-sm text-gray-500 leading-relaxed">{f.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ PLANOS ═══ */}
+      <section id="planos" className="py-16 md:py-24 px-4 bg-gray-50">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <p className="text-sm font-semibold uppercase tracking-widest mb-2" style={{ color: '#2E78B7' }}>Planos</p>
+            <h2 className="text-3xl md:text-4xl font-extrabold" style={{ color: '#3B3B4F' }}>
+              Escolha o plano ideal para você
+            </h2>
+            <p className="text-gray-500 mt-3 max-w-xl mx-auto">
+              Do iniciante ao profissional. Comece grátis e escale conforme seu negócio cresce.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
+
+            {/* Plano Grátis */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 hover:shadow-lg transition-shadow">
+              <div className="mb-6">
+                <span className="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-gray-100 text-gray-600">
+                  Gratuito
+                </span>
+              </div>
+              <div className="mb-6">
+                <span className="text-4xl font-extrabold" style={{ color: '#3B3B4F' }}>R$ 0</span>
+                <span className="text-gray-400 text-sm">/mês</span>
+              </div>
+              <p className="text-sm text-gray-500 mb-6">Ideal para quem está começando a revender iPhones.</p>
+              <ul className="space-y-3 mb-8">
+                {[
+                  'Até 20 produtos no estoque',
+                  'Registro de vendas',
+                  'Dashboard básico',
+                  'Recibo de venda',
+                  '1 usuário (admin)',
+                  'Acesso pelo navegador',
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                    <span className="text-green-500 mt-0.5 flex-shrink-0">✓</span>
+                    {item}
+                  </li>
+                ))}
+                {[
+                  'Múltiplos usuários',
+                  'Termo de garantia no PDF',
+                  'Relatórios avançados',
+                  'Suporte prioritário',
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-300">
+                    <span className="mt-0.5 flex-shrink-0">✗</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/login" className="block w-full py-3 rounded-xl text-center font-semibold text-sm border-2 transition-all hover:bg-gray-50" style={{ borderColor: '#2E78B7', color: '#2E78B7' }}>
+                Começar Grátis
+              </Link>
+            </div>
+
+            {/* Plano Pro — destaque */}
+            <div className="bg-white rounded-2xl border-2 p-8 relative shadow-xl scale-[1.03]" style={{ borderColor: '#2E78B7' }}>
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <span className="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider text-white" style={{ background: 'linear-gradient(135deg, #2E78B7, #1a5a8f)' }}>
+                  Mais Popular
+                </span>
+              </div>
+              <div className="mb-6 mt-2">
+                <span className="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-white" style={{ background: '#2E78B7' }}>
+                  Profissional
+                </span>
+              </div>
+              <div className="mb-1">
+                <span className="text-4xl font-extrabold" style={{ color: '#3B3B4F' }}>R$ 49</span>
+                <span className="text-gray-400 text-sm">,90/mês</span>
+              </div>
+              <p className="text-xs text-gray-400 mb-6">ou R$ 479,00/ano (20% off)</p>
+              <p className="text-sm text-gray-500 mb-6">Para revendedores que querem profissionalizar o negócio.</p>
+              <ul className="space-y-3 mb-8">
+                {[
+                  'Produtos ilimitados',
+                  'Registro de vendas completo',
+                  'Dashboard com filtros por mês',
+                  'Recibo + Termo de Garantia em PDF',
+                  'QR Code e Código de Barras',
+                  'Galeria de fotos por produto',
+                  '3 usuários (admin + vendedores)',
+                  'Ocultar valores com 1 clique',
+                  'Múltiplas formas de pagamento',
+                  'Suporte por WhatsApp',
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                    <span className="mt-0.5 flex-shrink-0" style={{ color: '#2E78B7' }}>✓</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/login" className="block w-full py-3 rounded-xl text-center font-bold text-sm text-white transition-all hover:opacity-90" style={{ background: 'linear-gradient(135deg, #2E78B7, #1a5a8f)', boxShadow: '0 4px 15px rgba(46,120,183,0.3)' }}>
+                Assinar Plano Pro
+              </Link>
+            </div>
+
+            {/* Plano Empresarial */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 hover:shadow-lg transition-shadow">
+              <div className="mb-6">
+                <span className="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-white" style={{ background: '#3B3B4F' }}>
+                  Empresarial
+                </span>
+              </div>
+              <div className="mb-1">
+                <span className="text-4xl font-extrabold" style={{ color: '#3B3B4F' }}>R$ 99</span>
+                <span className="text-gray-400 text-sm">,90/mês</span>
+              </div>
+              <p className="text-xs text-gray-400 mb-6">ou R$ 959,00/ano (20% off)</p>
+              <p className="text-sm text-gray-500 mb-6">Para lojas com equipe e múltiplos pontos de venda.</p>
+              <ul className="space-y-3 mb-8">
+                {[
+                  'Tudo do plano Profissional',
+                  'Usuários ilimitados',
+                  'Relatórios avançados (mensal/anual)',
+                  'Exportar dados em Excel',
+                  'Histórico de alterações',
+                  'Backup automático na nuvem',
+                  'Logo personalizada no recibo',
+                  'Multi-lojas (filiais)',
+                  'Suporte prioritário 24h',
+                  'Consultoria de implantação',
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                    <span className="text-green-500 mt-0.5 flex-shrink-0">✓</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <a href="#contato" className="block w-full py-3 rounded-xl text-center font-semibold text-sm border-2 transition-all hover:bg-gray-50" style={{ borderColor: '#3B3B4F', color: '#3B3B4F' }}>
+                Falar com Consultor
+              </a>
+            </div>
+
+          </div>
+
+          {/* Garantia */}
+          <div className="text-center mt-10">
+            <p className="text-sm text-gray-400">
+              🔒 Todos os planos possuem <strong className="text-gray-600">7 dias de garantia</strong> — cancele quando quiser, sem burocracia.
+            </p>
           </div>
         </div>
       </section>
