@@ -207,10 +207,10 @@ export default function EstoquePage() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-gray-800">
-                  {p.modelo} <span className="text-gray-400 font-normal text-sm">{p.linha}</span>
+                <p className="font-bold text-gray-800 text-sm truncate">
+                  {p.modelo} <span className="text-gray-400 font-normal text-xs">{p.linha}</span>
                 </p>
-                <p className="text-sm text-gray-500">{p.gb} · {p.cor}</p>
+                <p className="text-xs text-gray-500 truncate">{p.gb} · {p.cor}</p>
               </div>
               <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0 ${
                 p.status === 'EM_ESTOQUE' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
@@ -220,7 +220,7 @@ export default function EstoquePage() {
             </div>
 
             {/* Info */}
-            <div className="grid grid-cols-2 gap-2 text-sm">
+            <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
                 <span className="text-gray-400 text-xs">Código</span>
                 <p className="font-mono text-gray-600">{p.codigo}</p>

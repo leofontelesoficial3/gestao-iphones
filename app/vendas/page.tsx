@@ -142,13 +142,13 @@ export default function VendasPage() {
           <p className="py-10 text-center text-gray-400">Nenhuma venda encontrada.</p>
         )}
         {filtradas.map(p => (
-          <div key={p.id} className="bg-white rounded-xl shadow p-4 space-y-2">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-bold text-gray-800">
-                  {p.modelo} <span className="text-gray-400 font-normal text-sm">{p.linha}</span>
+          <div key={p.id} className="bg-white rounded-xl shadow p-3 space-y-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="font-bold text-gray-800 text-sm truncate">
+                  {p.modelo} <span className="text-gray-400 font-normal text-xs">{p.linha}</span>
                 </p>
-                <p className="text-sm text-gray-500">{p.gb} · {p.cor}</p>
+                <p className="text-xs text-gray-500 truncate">{p.gb} · {p.cor}</p>
               </div>
               <div className="text-right">
                 <p className="text-xs text-gray-400">
@@ -161,30 +161,30 @@ export default function VendasPage() {
             </div>
 
             {(p.cliente || p.contato) && (
-              <div className="text-sm text-gray-500">
+              <div className="text-xs text-gray-500 truncate">
                 {p.cliente && <span>{p.cliente}</span>}
-                {p.contato && <span className="ml-2 text-xs text-gray-400">{p.contato}</span>}
+                {p.contato && <span className="ml-2 text-gray-400">{p.contato}</span>}
               </div>
             )}
 
-            <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+            <div className="flex items-center justify-between bg-gray-50 rounded-lg px-2.5 py-2">
               <div className="text-center">
-                <p className="text-[10px] text-gray-400">Compra</p>
-                <p className="text-sm font-semibold text-gray-600">{fmt(p.valorCompra)}</p>
+                <p className="text-[9px] text-gray-400">Compra</p>
+                <p className="text-xs font-semibold text-gray-600">{fmt(p.valorCompra)}</p>
               </div>
               <div className="text-center">
-                <p className="text-[10px] text-gray-400">Venda</p>
-                <p className="text-sm font-bold">{p.valorVenda ? fmt(p.valorVenda) : '—'}</p>
+                <p className="text-[9px] text-gray-400">Venda</p>
+                <p className="text-xs font-bold">{p.valorVenda ? fmt(p.valorVenda) : '—'}</p>
               </div>
               {p.custos ? (
                 <div className="text-center">
-                  <p className="text-[10px] text-gray-400">Custos</p>
-                  <p className="text-sm font-semibold text-red-500">{fmt(p.custos)}</p>
+                  <p className="text-[9px] text-gray-400">Custos</p>
+                  <p className="text-xs font-semibold text-red-500">{fmt(p.custos)}</p>
                 </div>
               ) : null}
               <div className="text-center">
-                <p className="text-[10px] text-gray-400">Lucro</p>
-                <p className={`text-sm font-bold ${(p.lucro ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <p className="text-[9px] text-gray-400">Lucro</p>
+                <p className={`text-xs font-bold ${(p.lucro ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {p.lucro !== undefined ? fmt(p.lucro) : '—'}
                 </p>
               </div>

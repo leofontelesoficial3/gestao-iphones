@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -122,8 +123,13 @@ export default function LoginPage() {
           </div>
         </form>
 
-        {/* Rodapé */}
-        <p className="text-center text-xs mt-6" style={{ color: 'rgba(255,255,255,0.2)' }}>
+        {/* Voltar */}
+        <div className="text-center mt-6">
+          <Link href="/site" className="text-sm hover:underline transition-colors" style={{ color: 'rgba(138,180,216,0.6)' }}>
+            ← Voltar à página inicial
+          </Link>
+        </div>
+        <p className="text-center text-xs mt-3" style={{ color: 'rgba(255,255,255,0.2)' }}>
           iPhones Fortaleza&reg; — Sistema de Gestão
         </p>
       </div>
