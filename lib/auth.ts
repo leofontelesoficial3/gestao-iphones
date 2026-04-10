@@ -111,13 +111,59 @@ export function alterarSenha(usuario: string, senhaAtual: string, novaSenha: str
   return true;
 }
 
+// Planos e limites
+export type Plano = 'gratuito' | 'profissional' | 'empresarial';
+
+const LIMITE_VENDEDORES: Record<Plano, number> = {
+  gratuito: 0,
+  profissional: 2,
+  empresarial: 5,
+};
+
+export function getPlano(conta: string): Plano {
+  if (typeof window === 'undefined') return 'empresarial';
+  if (conta === 'default') return 'empresarial';
+  return (localStorage.getItem(`gestao_iphones_${conta}_plano`) as Plano) || 'gratuito';
+}
+
+export function setPlano(conta: string, plano: Plano): void {
+  localStorage.setItem(`gestao_iphones_${conta}_plano`, plano);
+}
+
+export function getVendedoresDaConta(conta: string): StoredUser[] {
+  const users = getUsers();
+  return users.filter(u => u.conta === conta && u.perfil === 'vendedor');
+}
+
+export function getLimiteVendedores(conta: string): { limite: number; atual: number; plano: Plano } {
+  const plano = getPlano(conta);
+  const atual = getVendedoresDaConta(conta).length;
+  return { limite: LIMITE_VENDEDORES[plano], atual, plano };
+}
+
 // Adiciona vendedor à mesma conta
 export function adicionarVendedor(conta: string, usuario: string, nome: string, senha: string): { ok: boolean; erro?: string } {
   const users = getUsers();
   if (users.find(u => u.usuario === usuario)) {
     return { ok: false, erro: 'Esse nome de usuário já está em uso.' };
   }
+  const { limite, atual, plano } = getLimiteVendedores(conta);
+  if (atual >= limite) {
+    if (plano === 'gratuito') {
+      return { ok: false, erro: 'O plano Gratuito não permite vendedores. Faça upgrade para o Profissional.' };
+    }
+    return { ok: false, erro: `Limite de ${limite} vendedores atingido no plano ${plano}. Faça upgrade para adicionar mais.` };
+  }
   users.push({ usuario, nome, senha, perfil: 'vendedor', conta });
   localStorage.setItem(USERS_KEY, JSON.stringify(users));
   return { ok: true };
+}
+
+export function removerVendedor(conta: string, usuario: string): boolean {
+  const users = getUsers();
+  const idx = users.findIndex(u => u.usuario === usuario && u.conta === conta && u.perfil === 'vendedor');
+  if (idx === -1) return false;
+  users.splice(idx, 1);
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  return true;
 }
