@@ -7,12 +7,13 @@ interface AuthCtx {
   loading: boolean;
   isAdmin: boolean;
   perfil: Perfil | null;
+  conta: string;
   login: (usuario: string, senha: string) => boolean;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthCtx>({
-  user: null, loading: true, isAdmin: false, perfil: null,
+  user: null, loading: true, isAdmin: false, perfil: null, conta: 'default',
   login: () => false, logout: () => {},
 });
 
@@ -40,9 +41,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAdmin = user?.perfil === 'admin';
   const perfil = user?.perfil ?? null;
+  const conta = user?.conta ?? 'default';
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, perfil, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, perfil, conta, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

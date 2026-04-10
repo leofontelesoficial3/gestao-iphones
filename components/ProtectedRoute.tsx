@@ -4,21 +4,23 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 
 const ADMIN_ROUTES = ['/', '/vendas'];
+const PUBLIC_ROUTES = ['/login', '/registro', '/site'];
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading, isAdmin } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
+  const isPublic = PUBLIC_ROUTES.includes(pathname);
+
   useEffect(() => {
-    if (!loading && !user && pathname !== '/login') {
+    if (!loading && !user && !isPublic) {
       router.replace('/login');
     }
-    // Vendedor tentando acessar rota de admin → redireciona pro estoque
     if (!loading && user && !isAdmin && ADMIN_ROUTES.includes(pathname)) {
       router.replace('/estoque');
     }
-  }, [user, loading, pathname, router, isAdmin]);
+  }, [user, loading, pathname, router, isAdmin, isPublic]);
 
   if (loading) {
     return (
@@ -31,7 +33,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     );
   }
 
-  if (!user && pathname !== '/login') return null;
+  if (!user && !isPublic) return null;
   if (user && !isAdmin && ADMIN_ROUTES.includes(pathname)) return null;
 
   return <>{children}</>;

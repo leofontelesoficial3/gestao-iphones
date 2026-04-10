@@ -1,25 +1,44 @@
 import { Produto, Stats } from '@/types';
 import { seedProdutos } from './seedData';
+import { getLoggedUser } from './auth';
 
-const STORAGE_KEY = 'gestao_iphones_produtos';
-const SEED_VERSION = 'v3'; // Atualize ao mudar o seedData
+const SEED_VERSION = 'v3';
+
+function getStorageKey(): string {
+  const user = getLoggedUser();
+  if (!user || user.conta === 'default') return 'gestao_iphones_produtos';
+  return `gestao_iphones_${user.conta}`;
+}
+
+function isDefaultAccount(): boolean {
+  const user = getLoggedUser();
+  return !user || user.conta === 'default';
+}
 
 export function getProdutos(): Produto[] {
   if (typeof window === 'undefined') return [];
-  const versao = localStorage.getItem(STORAGE_KEY + '_version');
-  if (versao !== SEED_VERSION) {
-    // Seed atualizado — recarrega os dados
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(seedProdutos));
-    localStorage.setItem(STORAGE_KEY + '_version', SEED_VERSION);
-    return seedProdutos;
+  const key = getStorageKey();
+
+  if (isDefaultAccount()) {
+    // Conta padrão (admin/vendedor): usa seed
+    const versao = localStorage.getItem(key + '_version');
+    if (versao !== SEED_VERSION) {
+      localStorage.setItem(key, JSON.stringify(seedProdutos));
+      localStorage.setItem(key + '_version', SEED_VERSION);
+      return seedProdutos;
+    }
   }
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return seedProdutos;
+
+  const raw = localStorage.getItem(key);
+  if (!raw) {
+    if (isDefaultAccount()) return seedProdutos;
+    return []; // Contas novas começam vazias
+  }
   return JSON.parse(raw) as Produto[];
 }
 
 export function saveProdutos(produtos: Produto[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(produtos));
+  localStorage.setItem(getStorageKey(), JSON.stringify(produtos));
 }
 
 export function addProduto(produto: Omit<Produto, 'id'>): Produto {

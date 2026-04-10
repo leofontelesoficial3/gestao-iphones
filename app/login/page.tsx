@@ -112,14 +112,17 @@ export default function LoginPage() {
             ) : 'Entrar'}
           </button>
 
-          {/* Info */}
-          <div className="text-center text-xs space-y-1" style={{ color: 'rgba(138,180,216,0.5)' }}>
+          {/* Criar conta */}
+          <div className="text-center text-xs space-y-2" style={{ color: 'rgba(138,180,216,0.5)' }}>
             <p>
-              Admin: <strong style={{ color: '#8ab4d8' }}>admin</strong> / <strong style={{ color: '#8ab4d8' }}>admin</strong>
+              Não tem conta?{' '}
+              <Link href="/registro" className="font-semibold hover:underline" style={{ color: '#5AAA4A' }}>
+                Criar conta grátis
+              </Link>
             </p>
-            <p>
-              Vendedor: <strong style={{ color: '#8ab4d8' }}>vendedor</strong> / <strong style={{ color: '#8ab4d8' }}>vendedor</strong>
-            </p>
+            <div className="border-t border-white/10 pt-2 mt-2">
+              <p>Demo: <strong style={{ color: '#8ab4d8' }}>admin</strong> / <strong style={{ color: '#8ab4d8' }}>admin</strong></p>
+            </div>
           </div>
         </form>
 
