@@ -18,6 +18,7 @@ export interface Produto {
   valorCompra: number;
   status: ProdutoStatus;
   fotos?: string[]; // base64
+  fornecedorId?: number;
   // Campos preenchidos quando VENDIDO
   dataVenda?: string;
   valorVenda?: number;
@@ -28,6 +29,16 @@ export interface Produto {
   formasPagamento?: FormaPagamento[];
   parcelasCredito?: number; // 1-18
   acrescimo?: number; // valor total do acréscimo em R$
+}
+
+export interface Fornecedor {
+  id: number;
+  nome: string;
+  telefone: string;
+  endereco: string;
+  /** Calculado via join quando a rota é chamada com ?stats=1 */
+  totalProdutos?: number;
+  valorTotal?: number;
 }
 
 export interface Stats {

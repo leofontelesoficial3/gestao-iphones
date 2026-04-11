@@ -60,6 +60,21 @@ export async function GET() {
     )
   `;
 
+  // Tabela de fornecedores
+  await sql`
+    CREATE TABLE IF NOT EXISTS fornecedores (
+      id SERIAL PRIMARY KEY,
+      conta VARCHAR(100) NOT NULL DEFAULT 'default',
+      nome VARCHAR(200) NOT NULL,
+      telefone VARCHAR(30),
+      endereco TEXT,
+      created_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+
+  // Adiciona coluna fornecedor_id em produtos (migration idempotente)
+  await sql`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS fornecedor_id INTEGER`;
+
   // Seed users padrão
   const existingUsers = await sql`SELECT COUNT(*) as total FROM users`;
   if (Number(existingUsers[0].total) === 0) {

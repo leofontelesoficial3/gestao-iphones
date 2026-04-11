@@ -27,6 +27,7 @@ function rowToProduto(r: any) {
     formasPagamento: r.formas_pagamento ? JSON.parse(r.formas_pagamento) : undefined,
     parcelasCredito: r.parcelas_credito ? Number(r.parcelas_credito) : undefined,
     acrescimo: r.acrescimo ? Number(r.acrescimo) : undefined,
+    fornecedorId: r.fornecedor_id ? Number(r.fornecedor_id) : undefined,
   };
 }
 
@@ -44,8 +45,8 @@ export async function POST(req: NextRequest) {
   const id = crypto.randomUUID();
 
   await sql`
-    INSERT INTO produtos (id, conta, data_entrada, codigo, modelo, linha, imei, possui_nota, gb, comp_trocado, cor, estado, bateria, valor_compra, status, fotos)
-    VALUES (${id}, ${body.conta || 'default'}, ${body.dataEntrada}, ${body.codigo}, ${body.modelo}, ${body.linha}, ${body.imei}, ${body.possuiNota}, ${body.gb}, ${body.compTrocado}, ${body.cor}, ${body.estado}, ${body.bateria}, ${body.valorCompra}, 'EM_ESTOQUE', ${body.fotos ? JSON.stringify(body.fotos) : null})
+    INSERT INTO produtos (id, conta, data_entrada, codigo, modelo, linha, imei, possui_nota, gb, comp_trocado, cor, estado, bateria, valor_compra, status, fotos, fornecedor_id)
+    VALUES (${id}, ${body.conta || 'default'}, ${body.dataEntrada}, ${body.codigo}, ${body.modelo}, ${body.linha}, ${body.imei}, ${body.possuiNota}, ${body.gb}, ${body.compTrocado}, ${body.cor}, ${body.estado}, ${body.bateria}, ${body.valorCompra}, 'EM_ESTOQUE', ${body.fotos ? JSON.stringify(body.fotos) : null}, ${body.fornecedorId ?? null})
   `;
 
   const rows = await sql`SELECT * FROM produtos WHERE id = ${id}`;
@@ -82,6 +83,7 @@ export async function PUT(req: NextRequest) {
       formas_pagamento = ${updates.formasPagamento ? JSON.stringify(updates.formasPagamento) : null},
       parcelas_credito = ${updates.parcelasCredito ?? null},
       acrescimo = ${updates.acrescimo ?? null},
+      fornecedor_id = COALESCE(${updates.fornecedorId ?? null}, fornecedor_id),
       updated_at = NOW()
     WHERE id = ${id}
   `;

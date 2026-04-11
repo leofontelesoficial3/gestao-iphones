@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Produto } from '@/types';
-import { addProduto, getNextCodigo } from '@/lib/storage';
+import { Produto, Fornecedor } from '@/types';
+import { addProduto, getNextCodigo, getFornecedores } from '@/lib/storage';
 import { mascaraMoedaDigitada, parseCentavos } from '@/lib/format';
 
 const MODELOS = [
@@ -43,6 +43,8 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
   const [fImei, setFImei]     = useState('');
   const [fValorCompra, setFValorCompra] = useState(0);
   const [fValorCompraTxt, setFValorCompraTxt] = useState('');
+  const [fFornecedorId, setFFornecedorId] = useState<number | ''>('');
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
 
@@ -52,6 +54,7 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
       setAba('estoque');
       setErro('');
       setTimeout(() => inputRef.current?.focus(), 50);
+      getFornecedores().then(setFornecedores);
     }
   }, [open]);
 
@@ -115,11 +118,12 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
         valorCompra: fValorCompra,
         status: 'EM_ESTOQUE',
         fotos: [],
+        fornecedorId: fFornecedorId ? Number(fFornecedorId) : undefined,
       });
       await onFornecedorCriado();
       onSelect(novo, 'fornecedor');
       // Reset
-      setFImei(''); setFValorCompra(0); setFValorCompraTxt('');
+      setFImei(''); setFValorCompra(0); setFValorCompraTxt(''); setFFornecedorId('');
     } catch {
       setErro('Erro ao cadastrar produto do fornecedor.');
     } finally {
@@ -329,6 +333,24 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
                     placeholder="R$ 0,00"
                     required
                   />
+                </div>
+                <div className="col-span-2">
+                  <label className="label">Fornecedor <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
+                  <select
+                    className="input"
+                    value={fFornecedorId}
+                    onChange={e => setFFornecedorId(e.target.value ? Number(e.target.value) : '')}
+                  >
+                    <option value="">— Nenhum —</option>
+                    {fornecedores.map(f => (
+                      <option key={f.id} value={f.id}>{f.nome}</option>
+                    ))}
+                  </select>
+                  {fornecedores.length === 0 && (
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      Cadastre fornecedores em Fornecedores no menu
+                    </p>
+                  )}
                 </div>
               </div>
 

@@ -6,6 +6,11 @@ import AuthProvider from '@/components/AuthProvider';
 export const metadata: Metadata = {
   title: 'iPhones Fortaleza — Gestão',
   description: 'Sistema de gestão de compra e venda — iPhones Fortaleza',
+  icons: {
+    icon: '/logo.jpg',
+    shortcut: '/logo.jpg',
+    apple: '/logo.jpg',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -15,8 +20,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#2a2a3d" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="iPhones FTZ" />
+        <meta name="application-name" content="iPhones Fortaleza" />
         <link rel="manifest" href="/manifest.json" />
+        {/* Ícones para 'Adicionar à Tela de Início' — iOS e Android */}
+        <link rel="icon" type="image/jpeg" href="/logo.jpg" />
+        <link rel="apple-touch-icon" href="/logo.jpg" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/logo.jpg" />
+        <link rel="apple-touch-icon" sizes="167x167" href="/logo.jpg" />
+        <link rel="apple-touch-icon" sizes="152x152" href="/logo.jpg" />
+        <link rel="apple-touch-icon" sizes="120x120" href="/logo.jpg" />
       </head>
       <body className="min-h-screen flex flex-col">
         <AuthProvider>

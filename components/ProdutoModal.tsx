@@ -1,7 +1,8 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Produto } from '@/types';
+import { Produto, Fornecedor } from '@/types';
 import { mascaraMoedaDigitada, parseCentavos } from '@/lib/format';
+import { getFornecedores } from '@/lib/storage';
 
 const MODELOS = [
   'IPHONE 6', 'IPHONE 7', 'IPHONE 8', 'IPHONE X', 'IPHONE XR', 'IPHONE XS', 'IPHONE XS MAX',
@@ -47,7 +48,12 @@ export default function ProdutoModal({ open, onClose, onSave, editProduto, nextC
   const [form, setForm] = useState<Omit<Produto, 'id'>>(empty());
   const [valorCompraTxt, setValorCompraTxt] = useState('');
   const [fotoAmpliada, setFotoAmpliada] = useState<string | null>(null);
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const inputFotoRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) getFornecedores().then(setFornecedores);
+  }, [open]);
 
   useEffect(() => {
     if (editProduto) {
@@ -191,6 +197,19 @@ export default function ProdutoModal({ open, onClose, onSave, editProduto, nextC
                 }}
                 required
               />
+            </div>
+            <div className="col-span-2">
+              <label className="label">Fornecedor <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
+              <select
+                className="input"
+                value={form.fornecedorId ?? ''}
+                onChange={e => set('fornecedorId', e.target.value ? Number(e.target.value) : undefined)}
+              >
+                <option value="">— Sem fornecedor —</option>
+                {fornecedores.map(f => (
+                  <option key={f.id} value={f.id}>{f.nome}</option>
+                ))}
+              </select>
             </div>
 
             {/* Seção de Fotos */}

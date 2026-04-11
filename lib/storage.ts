@@ -1,9 +1,40 @@
-import { Produto, Stats } from '@/types';
+import { Produto, Stats, Fornecedor } from '@/types';
 import { getLoggedUser } from './auth';
 
 function getConta(): string {
   const user = getLoggedUser();
   return user?.conta || 'default';
+}
+
+// ── Fornecedores ──────────────────────────────────────────────
+export async function getFornecedores(withStats = false): Promise<Fornecedor[]> {
+  const qs = new URLSearchParams({ conta: getConta() });
+  if (withStats) qs.set('stats', '1');
+  const res = await fetch(`/api/fornecedores?${qs.toString()}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function addFornecedor(data: Omit<Fornecedor, 'id'>): Promise<Fornecedor> {
+  const res = await fetch('/api/fornecedores', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...data, conta: getConta() }),
+  });
+  return res.json();
+}
+
+export async function updateFornecedor(id: number, updates: Partial<Fornecedor>): Promise<Fornecedor> {
+  const res = await fetch('/api/fornecedores', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, ...updates }),
+  });
+  return res.json();
+}
+
+export async function deleteFornecedor(id: number): Promise<void> {
+  await fetch(`/api/fornecedores?id=${id}`, { method: 'DELETE' });
 }
 
 export async function getProdutosAsync(): Promise<Produto[]> {
