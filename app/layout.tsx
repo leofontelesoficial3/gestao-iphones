@@ -7,9 +7,12 @@ export const metadata: Metadata = {
   title: 'iPhones Fortaleza — Gestão',
   description: 'Sistema de gestão de compra e venda — iPhones Fortaleza',
   icons: {
-    icon: '/pwa-icon.jpg',
-    shortcut: '/pwa-icon.jpg',
-    apple: '/pwa-icon.jpg',
+    icon: [
+      { url: '/pwa-icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/pwa-icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    shortcut: '/pwa-icon-192.png',
+    apple: '/apple-touch-icon.png',
   },
 };
 
@@ -26,12 +29,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="application-name" content="iPhones Fortaleza" />
         <link rel="manifest" href="/manifest.json" />
         {/* Ícones para 'Adicionar à Tela de Início' — iOS e Android */}
-        <link rel="icon" type="image/jpeg" href="/pwa-icon.jpg" />
-        <link rel="apple-touch-icon" href="/pwa-icon.jpg" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/pwa-icon.jpg" />
-        <link rel="apple-touch-icon" sizes="167x167" href="/pwa-icon.jpg" />
-        <link rel="apple-touch-icon" sizes="152x152" href="/pwa-icon.jpg" />
-        <link rel="apple-touch-icon" sizes="120x120" href="/pwa-icon.jpg" />
+        {/* PNG quadrado com logo centralizado preservando a proporção original */}
+        <link rel="icon" type="image/png" sizes="192x192" href="/pwa-icon-192.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/pwa-icon-512.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
       </head>
       <body className="min-h-screen flex flex-col">
         <AuthProvider>
