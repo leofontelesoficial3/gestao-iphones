@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { loadProdutos, updateProduto, addProduto, getNextCodigo } from '@/lib/storage';
+import { loadProdutos, updateProduto, addProduto, getNextCodigo, deleteProduto } from '@/lib/storage';
 import { Produto } from '@/types';
 import StatsCard from '@/components/StatsCard';
 import VendaRapidaModal from '@/components/VendaRapidaModal';
@@ -28,6 +28,8 @@ export default function Dashboard() {
   // Modais de venda
   const [vendaRapidaOpen, setVendaRapidaOpen] = useState(false);
   const [vendendo, setVendendo] = useState<Produto | null>(null);
+  /** Id do produto criado via fluxo Fornecedor (para desfazer se cancelar). */
+  const [produtoTempId, setProdutoTempId] = useState<string | null>(null);
   const [reciboAberto, setReciboAberto] = useState(false);
   const [produtoRecibo, setProdutoRecibo] = useState<Produto | null>(null);
   const [toastVenda, setToastVenda] = useState(false);
@@ -42,9 +44,20 @@ export default function Dashboard() {
     reload();
   }, [reload]);
 
-  const handleAbrirVenda = (produto: Produto) => {
+  const handleAbrirVenda = (produto: Produto, source: 'estoque' | 'fornecedor') => {
     setVendaRapidaOpen(false);
     setVendendo(produto);
+    setProdutoTempId(source === 'fornecedor' ? produto.id : null);
+  };
+
+  const handleCancelarVenda = async () => {
+    // Se o produto em venda veio do fluxo Fornecedor, removemos do estoque
+    if (produtoTempId) {
+      try { await deleteProduto(produtoTempId); } catch {}
+      await reload();
+    }
+    setProdutoTempId(null);
+    setVendendo(null);
   };
 
   const handleSaveVenda = async (updates: Partial<Produto>, produtoRecebido?: ProdutoRecebidoData) => {
@@ -69,6 +82,7 @@ export default function Dashboard() {
     setToastVenda(true);
     await reload();
     setVendendo(null);
+    setProdutoTempId(null); // Venda confirmada: produto não é mais temporário
   };
 
   // Meses disponíveis com vendas
@@ -306,7 +320,7 @@ export default function Dashboard() {
       />
       <VendaModal
         open={!!vendendo}
-        onClose={() => setVendendo(null)}
+        onClose={handleCancelarVenda}
         onSave={handleSaveVenda}
         produto={vendendo}
       />

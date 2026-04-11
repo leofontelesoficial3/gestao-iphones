@@ -52,6 +52,8 @@ export default function EstoquePage() {
   const [produtoRecibo, setProdutoRecibo] = useState<Produto | null>(null);
   const [ocultarValores, setOcultarValores] = useState(false);
   const [vendaRapidaOpen, setVendaRapidaOpen] = useState(false);
+  /** Id do produto criado via fluxo Fornecedor (para desfazer se cancelar). */
+  const [produtoTempId, setProdutoTempId] = useState<string | null>(null);
 
   // Mostra valores? Admin + toggle ligado
   const mostrarValores = isAdmin && !ocultarValores;
@@ -105,6 +107,7 @@ export default function EstoquePage() {
       setToastVenda(true);
       await load();
       setVendendo(null);
+      setProdutoTempId(null); // Venda confirmada: produto não é mais temporário
     }
   };
 
@@ -138,10 +141,22 @@ export default function EstoquePage() {
     }
   };
 
-  const handleSelecionarVendaRapida = (p: Produto) => {
+  const handleSelecionarVendaRapida = (p: Produto, source: 'estoque' | 'fornecedor') => {
     setVendaRapidaOpen(false);
     setVendendo(p);
     setModalVenda(true);
+    setProdutoTempId(source === 'fornecedor' ? p.id : null);
+  };
+
+  const handleCancelarVenda = async () => {
+    // Se a venda foi aberta via Fornecedor, desfaz o cadastro
+    if (produtoTempId) {
+      try { await deleteProduto(produtoTempId); } catch {}
+      await load();
+    }
+    setProdutoTempId(null);
+    setModalVenda(false);
+    setVendendo(null);
   };
 
   return (
@@ -346,7 +361,7 @@ export default function EstoquePage() {
               )}
               {p.status === 'EM_ESTOQUE' && (
                 <button
-                  onClick={() => { setVendendo(p); setModalVenda(true); }}
+                  onClick={() => { setProdutoTempId(null); setVendendo(p); setModalVenda(true); }}
                   className="flex-1 py-2 text-sm bg-green-100 hover:bg-green-200 rounded-lg text-green-700 font-medium"
                 >
                   Vender
@@ -498,7 +513,7 @@ export default function EstoquePage() {
                       )}
                       {p.status === 'EM_ESTOQUE' && (
                         <button
-                          onClick={() => { setVendendo(p); setModalVenda(true); }}
+                          onClick={() => { setProdutoTempId(null); setVendendo(p); setModalVenda(true); }}
                           className="px-2 py-1 text-xs bg-green-100 hover:bg-green-200 rounded text-green-700"
                           title="Registrar venda"
                         >
@@ -547,7 +562,7 @@ export default function EstoquePage() {
       />
       <VendaModal
         open={modalVenda}
-        onClose={() => { setModalVenda(false); setVendendo(null); }}
+        onClose={handleCancelarVenda}
         onSave={handleSaveVenda}
         produto={vendendo}
       />

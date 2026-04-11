@@ -21,7 +21,8 @@ interface Props {
   open: boolean;
   onClose: () => void;
   produtos: Produto[];
-  onSelect: (produto: Produto) => void;
+  /** source indica se o produto veio do estoque existente ou foi recém-criado via Fornecedor */
+  onSelect: (produto: Produto, source: 'estoque' | 'fornecedor') => void;
   onFornecedorCriado: () => void | Promise<void>;
 }
 
@@ -86,7 +87,7 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
   if (!open) return null;
 
   const handleSelectEstoque = (p: Produto) => {
-    onSelect(p);
+    onSelect(p, 'estoque');
   };
 
   const handleCriarFornecedor = async (e: React.FormEvent) => {
@@ -116,7 +117,7 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
         fotos: [],
       });
       await onFornecedorCriado();
-      onSelect(novo);
+      onSelect(novo, 'fornecedor');
       // Reset
       setFImei(''); setFValorCompra(0); setFValorCompraTxt('');
     } catch {
