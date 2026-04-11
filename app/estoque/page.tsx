@@ -4,6 +4,7 @@ import { Produto } from '@/types';
 import { loadProdutos, addProduto, updateProduto, deleteProduto, getNextCodigo } from '@/lib/storage';
 import ProdutoModal from '@/components/ProdutoModal';
 import VendaModal, { ProdutoRecebidoData } from '@/components/VendaModal';
+import VendaRapidaModal from '@/components/VendaRapidaModal';
 import FotosModal from '@/components/FotosModal';
 import CodigoModal from '@/components/CodigoModal';
 import Toast from '@/components/Toast';
@@ -50,6 +51,7 @@ export default function EstoquePage() {
   const [reciboAberto, setReciboAberto] = useState(false);
   const [produtoRecibo, setProdutoRecibo] = useState<Produto | null>(null);
   const [ocultarValores, setOcultarValores] = useState(false);
+  const [vendaRapidaOpen, setVendaRapidaOpen] = useState(false);
 
   // Mostra valores? Admin + toggle ligado
   const mostrarValores = isAdmin && !ocultarValores;
@@ -136,6 +138,12 @@ export default function EstoquePage() {
     }
   };
 
+  const handleSelecionarVendaRapida = (p: Produto) => {
+    setVendaRapidaOpen(false);
+    setVendendo(p);
+    setModalVenda(true);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -149,6 +157,47 @@ export default function EstoquePage() {
           </button>
         )}
       </div>
+
+      {/* Atalho rápido: Realizar Venda */}
+      <button
+        onClick={() => setVendaRapidaOpen(true)}
+        className="group relative w-full overflow-hidden rounded-2xl p-4 md:p-5 text-left transition-all hover:scale-[1.01] active:scale-[0.99]"
+        style={{
+          background: 'linear-gradient(135deg, #2E78B7 0%, #1a5a8f 50%, #3B3B4F 100%)',
+          boxShadow: '0 10px 32px rgba(46,120,183,0.32), inset 0 1px 0 rgba(255,255,255,0.12)',
+        }}
+      >
+        <div
+          className="absolute inset-0 opacity-20 pointer-events-none"
+          style={{
+            backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(90,170,74,0.2) 0%, transparent 40%)',
+          }}
+        />
+        <div className="relative flex items-center gap-4">
+          <div
+            className="w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:rotate-[-6deg]"
+            style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)' }}
+          >
+            <span className="text-2xl md:text-3xl">💸</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] md:text-xs font-bold tracking-[0.25em] uppercase text-white/60">
+              Atalho rápido
+            </p>
+            <h2 className="text-base md:text-xl font-extrabold text-white tracking-tight mt-0.5">
+              Realizar Venda
+            </h2>
+            <p className="text-xs text-white/70 mt-0.5 hidden sm:block">
+              Busque pelo código ou modelo · ou cadastre um produto do fornecedor
+            </p>
+          </div>
+          <div className="flex-shrink-0 w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all group-hover:translate-x-1" style={{ background: 'rgba(255,255,255,0.2)' }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M5 12h14M13 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      </button>
 
       {/* Filtros */}
       <div className="flex gap-3 flex-wrap">
@@ -488,6 +537,13 @@ export default function EstoquePage() {
         onSave={handleSaveProduto}
         editProduto={editando}
         nextCodigo={nextCodigo}
+      />
+      <VendaRapidaModal
+        open={vendaRapidaOpen}
+        onClose={() => setVendaRapidaOpen(false)}
+        produtos={produtos}
+        onSelect={handleSelecionarVendaRapida}
+        onFornecedorCriado={load}
       />
       <VendaModal
         open={modalVenda}
