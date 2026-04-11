@@ -49,6 +49,7 @@ export default function ProdutoModal({ open, onClose, onSave, editProduto, nextC
   const [valorCompraTxt, setValorCompraTxt] = useState('');
   const [fotoAmpliada, setFotoAmpliada] = useState<string | null>(null);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
+  const [uploading, setUploading] = useState(false);
   const inputFotoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -56,11 +57,17 @@ export default function ProdutoModal({ open, onClose, onSave, editProduto, nextC
   }, [open]);
 
   useEffect(() => {
+    if (!open) return;
     if (editProduto) {
-      const { id, ...rest } = editProduto;
+      // Edição: carrega todos os campos do produto
+      const { id: _id, ...rest } = editProduto;
+      void _id;
       setForm({ ...rest, fotos: rest.fotos ?? [] });
-      setValorCompraTxt(rest.valorCompra > 0 ? mascaraMoedaDigitada(String(Math.round(rest.valorCompra * 100))) : '');
+      setValorCompraTxt(
+        rest.valorCompra > 0 ? mascaraMoedaDigitada(String(Math.round(rest.valorCompra * 100))) : ''
+      );
     } else {
+      // Novo: form vazio com próximo código
       setForm({ ...empty(), codigo: nextCodigo });
       setValorCompraTxt('');
     }
@@ -70,8 +77,6 @@ export default function ProdutoModal({ open, onClose, onSave, editProduto, nextC
 
   const set = (field: keyof Omit<Produto, 'id'>, value: unknown) =>
     setForm(prev => ({ ...prev, [field]: value }));
-
-  const [uploading, setUploading] = useState(false);
 
   const handleAddFotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
