@@ -230,33 +230,32 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
                     <button
                       key={p.id}
                       onClick={() => handleSelectEstoque(p)}
-                      className="w-full flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-blue-50 border-2 border-transparent hover:border-blue-200 transition-all text-left group"
+                      className="w-full flex items-center gap-2.5 p-2.5 rounded-xl bg-gray-50 hover:bg-blue-50 border-2 border-transparent hover:border-blue-200 transition-all text-left group"
                     >
                       {/* Foto */}
-                      <div className="w-12 h-12 rounded-lg bg-white flex-shrink-0 overflow-hidden flex items-center justify-center border border-gray-200">
+                      <div className="w-11 h-11 rounded-lg bg-white flex-shrink-0 overflow-hidden flex items-center justify-center border border-gray-200">
                         {p.fotos && p.fotos.length > 0 ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={p.fotos[0]} alt={p.modelo} className="w-full h-full object-cover" />
                         ) : (
-                          <span className="text-xl text-gray-300">📱</span>
+                          <span className="text-lg text-gray-300">📱</span>
                         )}
                       </div>
-                      {/* Info */}
+                      {/* Info: linha 1 = modelo (inteiro), linha 2 = cod · gb · cor */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold px-1.5 py-0.5 rounded" style={{ background: '#eef5fb', color: '#2E78B7' }}>
-                            #{p.codigo}
-                          </span>
-                          <p className="font-bold text-gray-800 text-sm truncate">
-                            {p.modelo} <span className="text-gray-400 font-normal">{p.linha}</span>
-                          </p>
-                        </div>
-                        <p className="text-xs text-gray-500 truncate mt-0.5">
-                          {p.gb} · {p.cor} · {p.estado} · Bat {p.bateria}%
+                        <p className="font-bold text-gray-800 text-sm leading-tight truncate">
+                          {p.modelo} <span className="text-gray-400 font-normal">{p.linha}</span>
+                        </p>
+                        <p className="text-[11px] text-gray-500 truncate mt-0.5 leading-tight">
+                          <span className="font-mono font-semibold" style={{ color: '#2E78B7' }}>#{p.codigo}</span>
+                          <span className="text-gray-300 mx-1">·</span>
+                          <span className="font-medium">{p.gb}</span>
+                          <span className="text-gray-300 mx-1">·</span>
+                          <span>{p.cor}</span>
                         </p>
                       </div>
                       {/* Arrow */}
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" className="flex-shrink-0 group-hover:stroke-blue-500 group-hover:translate-x-0.5 transition-all">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" className="flex-shrink-0 group-hover:stroke-blue-500 group-hover:translate-x-0.5 transition-all">
                         <path d="M9 18l6-6-6-6" />
                       </svg>
                     </button>
