@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { Produto } from '@/types';
+import { mascaraMoedaDigitada, parseCentavos } from '@/lib/format';
 
 const MODELOS = [
   'IPHONE 6', 'IPHONE 7', 'IPHONE 8', 'IPHONE X', 'IPHONE XR', 'IPHONE XS', 'IPHONE XS MAX',
@@ -44,6 +45,7 @@ const empty = (): Omit<Produto, 'id'> => ({
 
 export default function ProdutoModal({ open, onClose, onSave, editProduto, nextCodigo }: Props) {
   const [form, setForm] = useState<Omit<Produto, 'id'>>(empty());
+  const [valorCompraTxt, setValorCompraTxt] = useState('');
   const [fotoAmpliada, setFotoAmpliada] = useState<string | null>(null);
   const inputFotoRef = useRef<HTMLInputElement>(null);
 
@@ -51,8 +53,10 @@ export default function ProdutoModal({ open, onClose, onSave, editProduto, nextC
     if (editProduto) {
       const { id, ...rest } = editProduto;
       setForm({ ...rest, fotos: rest.fotos ?? [] });
+      setValorCompraTxt(rest.valorCompra > 0 ? mascaraMoedaDigitada(String(Math.round(rest.valorCompra * 100))) : '');
     } else {
       setForm({ ...empty(), codigo: nextCodigo });
+      setValorCompraTxt('');
     }
   }, [editProduto, nextCodigo, open]);
 
@@ -61,37 +65,35 @@ export default function ProdutoModal({ open, onClose, onSave, editProduto, nextC
   const set = (field: keyof Omit<Produto, 'id'>, value: unknown) =>
     setForm(prev => ({ ...prev, [field]: value }));
 
-  const comprimirImagem = (file: File): Promise<string> =>
-    new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onload = e => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX = 900;
-          let { width, height } = img;
-          if (width > MAX) { height = (height * MAX) / width; width = MAX; }
-          if (height > MAX) { width = (width * MAX) / height; height = MAX; }
-          canvas.width = width;
-          canvas.height = height;
-          canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.78));
-        };
-        img.src = e.target!.result as string;
-      };
-      reader.readAsDataURL(file);
-    });
+  const [uploading, setUploading] = useState(false);
 
   const handleAddFotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
-    const novas = await Promise.all(files.map(comprimirImagem));
-    set('fotos', [...(form.fotos ?? []), ...novas]);
-    e.target.value = '';
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      files.forEach(f => formData.append('files', f));
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      if (res.ok) {
+        const data = await res.json();
+        set('fotos', [...(form.fotos ?? []), ...data.urls]);
+      }
+    } catch (err) {
+      console.error('Erro no upload:', err);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
   };
 
-  const removerFoto = (idx: number) =>
+  const removerFoto = async (idx: number) => {
+    const url = (form.fotos ?? [])[idx];
+    if (url?.startsWith('http')) {
+      try { await fetch('/api/upload', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) }); } catch {}
+    }
     set('fotos', (form.fotos ?? []).filter((_, i) => i !== idx));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,9 +177,20 @@ export default function ProdutoModal({ open, onClose, onSave, editProduto, nextC
                 onChange={e => set('bateria', e.target.value)} placeholder="100 ou VERIFICAR" />
             </div>
             <div className="col-span-2">
-              <label className="label">Valor de Compra (R$)</label>
-              <input type="number" className="input" value={form.valorCompra}
-                onChange={e => set('valorCompra', Number(e.target.value))} required min={0} step="0.01" />
+              <label className="label">Valor de Compra</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                className="input !font-semibold"
+                value={valorCompraTxt}
+                placeholder="R$ 0,00"
+                onChange={e => {
+                  const txt = mascaraMoedaDigitada(e.target.value);
+                  setValorCompraTxt(txt);
+                  set('valorCompra', parseCentavos(txt));
+                }}
+                required
+              />
             </div>
 
             {/* Seção de Fotos */}
@@ -187,9 +200,10 @@ export default function ProdutoModal({ open, onClose, onSave, editProduto, nextC
                 <button
                   type="button"
                   onClick={() => inputFotoRef.current?.click()}
-                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  disabled={uploading}
+                  className={`text-sm font-medium ${uploading ? 'text-gray-400' : 'text-blue-600 hover:text-blue-700'}`}
                 >
-                  + Adicionar fotos
+                  {uploading ? 'Enviando...' : '+ Adicionar fotos'}
                 </button>
                 <input
                   ref={inputFotoRef}

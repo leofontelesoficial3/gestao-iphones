@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { Produto, FormaPagamento } from '@/types';
+import { mascaraCelular, mascaraMoedaDigitada, parseCentavos } from '@/lib/format';
 
 const FORMAS: { id: FormaPagamento; label: string; icon: string }[] = [
   { id: 'DINHEIRO',          label: 'Dinheiro',          icon: '💵' },
@@ -56,25 +57,35 @@ type Valores = Partial<Record<FormaPagamento, number>>;
 export default function VendaModal({ open, onClose, onSave, produto }: Props) {
   const [dataVenda, setDataVenda] = useState(new Date().toISOString().split('T')[0]);
   const [valorVenda, setValorVenda] = useState(0);
+  const [valorVendaTxt, setValorVendaTxt] = useState('');
   const [custos, setCustos]   = useState(0);
+  const [custosTxt, setCustosTxt] = useState('');
   const [cliente, setCliente] = useState('');
   const [contato, setContato] = useState('');
   const [formas, setFormas]   = useState<FormaPagamento[]>([]);
   const [parcelas, setParcelas] = useState(1);
   const [valores, setValores]   = useState<Valores>({});
+  const [valoresTxt, setValoresTxt] = useState<Partial<Record<FormaPagamento, string>>>({});
   const [recebido, setRecebido] = useState<ProdutoRecebidoData>(emptyRecebido());
+  const [recebidoValorTxt, setRecebidoValorTxt] = useState('');
 
   useEffect(() => {
     if (!open || !produto) return;
     setDataVenda(produto.dataVenda || new Date().toISOString().split('T')[0]);
-    setValorVenda(produto.valorVenda ?? 0);
-    setCustos(produto.custos ?? 0);
+    const vv = produto.valorVenda ?? 0;
+    setValorVenda(vv);
+    setValorVendaTxt(vv > 0 ? mascaraMoedaDigitada(String(Math.round(vv * 100))) : '');
+    const cc = produto.custos ?? 0;
+    setCustos(cc);
+    setCustosTxt(cc > 0 ? mascaraMoedaDigitada(String(Math.round(cc * 100))) : '');
     setCliente(produto.cliente ?? '');
-    setContato(produto.contato ?? '');
+    setContato(produto.contato ? mascaraCelular(produto.contato) : '');
     setFormas(produto.formasPagamento ?? []);
     setParcelas(produto.parcelasCredito ?? 1);
     setValores({});
+    setValoresTxt({});
     setRecebido(emptyRecebido());
+    setRecebidoValorTxt('');
   }, [produto, open]);
 
   // Sincroniza o valor do Produto Recebido com o valorCompra estimado
@@ -107,10 +118,14 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
   const lucro = parseFloat((totalComRecebido - produto.valorCompra - custos - totalAcrescimo).toFixed(2));
 
   // ── Handlers ────────────────────────────────────────────────────
+  const pagamentoHabilitado = valorVenda > 0;
+
   const toggleForma = (f: FormaPagamento) => {
+    if (!pagamentoHabilitado) return;
     if (formas.includes(f)) {
       setFormas(prev => prev.filter(x => x !== f));
       setValores(prev => { const n = { ...prev }; delete n[f]; return n; });
+      setValoresTxt(prev => { const n = { ...prev }; delete n[f]; return n; });
     } else {
       setFormas(prev => [...prev, f]);
       if (f !== 'PRODUTO_RECEBIDO') {
@@ -119,6 +134,7 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
           k !== 'PRODUTO_RECEBIDO' ? s + (v || 0) : s, 0);
         const restante = Math.max(0, parseFloat((valorVenda - valorProdutoRecebido - jaAlocado).toFixed(2)));
         setValores(prev => ({ ...prev, [f]: restante }));
+        setValoresTxt(prev => ({ ...prev, [f]: restante > 0 ? mascaraMoedaDigitada(String(Math.round(restante * 100))) : '' }));
       }
     }
   };
@@ -131,7 +147,13 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
       if (cash.length >= 2 && f !== cash[cash.length - 1]) {
         const ultima = cash[cash.length - 1];
         const somaOutras = cash.filter(x => x !== ultima).reduce((s, x) => s + (novo[x] || 0), 0);
-        novo[ultima] = Math.max(0, parseFloat((valorVenda - valorProdutoRecebido - somaOutras).toFixed(2)));
+        const restanteUltima = Math.max(0, parseFloat((valorVenda - valorProdutoRecebido - somaOutras).toFixed(2)));
+        novo[ultima] = restanteUltima;
+        // Atualiza também o texto da última forma
+        setValoresTxt(prevTxt => ({
+          ...prevTxt,
+          [ultima]: restanteUltima > 0 ? mascaraMoedaDigitada(String(Math.round(restanteUltima * 100))) : '',
+        }));
       }
       return novo;
     });
@@ -180,10 +202,17 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
                 onChange={e => setDataVenda(e.target.value)} required />
             </div>
             <div>
-              <label className="label">Valor de Venda (R$)</label>
-              <input type="number" className="input" value={valorVenda} min={0} step="0.01"
+              <label className="label">Valor de Venda</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                className="input !font-semibold"
+                value={valorVendaTxt}
+                placeholder="R$ 0,00"
                 onChange={e => {
-                  const novo = parseFloat(e.target.value) || 0;
+                  const txt = mascaraMoedaDigitada(e.target.value);
+                  setValorVendaTxt(txt);
+                  const novo = parseCentavos(txt);
                   setValorVenda(novo);
                   // Recalcula a última forma cash
                   const cash = formas.filter(x => x !== 'PRODUTO_RECEBIDO');
@@ -192,15 +221,26 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
                     const somaOutras = cash.filter(x => x !== ultima).reduce((s, x) => s + (valores[x] || 0), 0);
                     const restante = Math.max(0, parseFloat((novo - valorProdutoRecebido - somaOutras).toFixed(2)));
                     setValores(prev => ({ ...prev, [ultima]: restante }));
+                    setValoresTxt(prev => ({ ...prev, [ultima]: restante > 0 ? mascaraMoedaDigitada(String(Math.round(restante * 100))) : '' }));
                   }
-                }} required />
+                }}
+                required
+              />
             </div>
           </div>
 
           {/* Formas de Pagamento */}
           <div>
-            <label className="label">Formas de Pagamento</label>
-            <div className="flex flex-col gap-2 mt-1">
+            <label className="label flex items-center justify-between">
+              <span>Formas de Pagamento</span>
+              {!pagamentoHabilitado && (
+                <span className="text-xs font-normal" style={{ color: '#D94070' }}>
+                  Informe o valor de venda primeiro
+                </span>
+              )}
+            </label>
+            <div className={`flex flex-col gap-2 mt-1 transition-opacity ${pagamentoHabilitado ? '' : 'opacity-40 pointer-events-none select-none'}`}
+              aria-disabled={!pagamentoHabilitado}>
               {FORMAS.map(f => {
                 const sel = formas.includes(f.id);
                 const isProdRecebido = f.id === 'PRODUTO_RECEBIDO';
@@ -223,9 +263,14 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
                     className={`rounded-xl border-2 transition-colors ${sel ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'}`}>
 
                     {/* Linha do checkbox */}
-                    <label className="flex items-center gap-3 px-4 py-3 cursor-pointer">
-                      <input type="checkbox" checked={sel} onChange={() => toggleForma(f.id)}
-                        className="w-4 h-4 accent-blue-600" />
+                    <label className={`flex items-center gap-3 px-4 py-3 ${pagamentoHabilitado ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
+                      <input
+                        type="checkbox"
+                        checked={sel}
+                        disabled={!pagamentoHabilitado}
+                        onChange={() => toggleForma(f.id)}
+                        className="w-4 h-4 accent-blue-600"
+                      />
                       <span className="text-lg">{f.icon}</span>
                       <span className={`font-medium text-sm flex-1 ${sel ? 'text-blue-700' : 'text-gray-700'}`}>
                         {f.label}
@@ -259,10 +304,16 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
                             </div>
                           ) : (
                             <input
-                              type="number" min={0} step="0.01"
+                              type="text"
+                              inputMode="numeric"
                               className="input"
-                              value={val}
-                              onChange={e => setValor(f.id, parseFloat(e.target.value) || 0)}
+                              placeholder="R$ 0,00"
+                              value={valoresTxt[f.id] ?? (val > 0 ? mascaraMoedaDigitada(String(Math.round(val * 100))) : '')}
+                              onChange={e => {
+                                const txt = mascaraMoedaDigitada(e.target.value);
+                                setValoresTxt(prev => ({ ...prev, [f.id]: txt }));
+                                setValor(f.id, parseCentavos(txt));
+                              }}
                             />
                           )}
                         </div>
@@ -330,9 +381,19 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
                     onChange={e => setR('dataEntrada', e.target.value)} />
                 </div>
                 <div>
-                  <label className="label">Valor Estimado (R$)</label>
-                  <input type="number" className="input" value={recebido.valorCompra} min={0} step="0.01"
-                    onChange={e => setR('valorCompra', parseFloat(e.target.value) || 0)} />
+                  <label className="label">Valor Estimado</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    className="input"
+                    value={recebidoValorTxt}
+                    placeholder="R$ 0,00"
+                    onChange={e => {
+                      const txt = mascaraMoedaDigitada(e.target.value);
+                      setRecebidoValorTxt(txt);
+                      setR('valorCompra', parseCentavos(txt));
+                    }}
+                  />
                 </div>
                 <div>
                   <label className="label">Modelo</label>
@@ -402,16 +463,33 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
             </div>
             <div>
               <label className="label">Contato (WhatsApp)</label>
-              <input type="text" className="input" value={contato}
-                onChange={e => setContato(e.target.value)} placeholder="(00) 00000-0000" />
+              <input
+                type="tel"
+                inputMode="numeric"
+                className="input"
+                value={contato}
+                onChange={e => setContato(mascaraCelular(e.target.value))}
+                placeholder="(00) 0 0000-0000"
+                maxLength={16}
+              />
             </div>
           </div>
 
           {/* Custos extras */}
           <div>
-            <label className="label">Custos Extras (R$)</label>
-            <input type="number" className="input" value={custos} min={0} step="0.01"
-              onChange={e => setCustos(parseFloat(e.target.value) || 0)} />
+            <label className="label">Custos Extras</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              className="input"
+              value={custosTxt}
+              placeholder="R$ 0,00"
+              onChange={e => {
+                const txt = mascaraMoedaDigitada(e.target.value);
+                setCustosTxt(txt);
+                setCustos(parseCentavos(txt));
+              }}
+            />
           </div>
 
           {/* Resumo financeiro */}

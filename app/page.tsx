@@ -1,8 +1,12 @@
 'use client';
-import { useEffect, useState, useMemo } from 'react';
-import { getProdutos } from '@/lib/storage';
+import { useEffect, useState, useMemo, useCallback } from 'react';
+import { loadProdutos, updateProduto, addProduto, getNextCodigo } from '@/lib/storage';
 import { Produto } from '@/types';
 import StatsCard from '@/components/StatsCard';
+import VendaRapidaModal from '@/components/VendaRapidaModal';
+import VendaModal, { ProdutoRecebidoData } from '@/components/VendaModal';
+import ReciboModal from '@/components/ReciboModal';
+import Toast from '@/components/Toast';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
 
@@ -21,9 +25,51 @@ export default function Dashboard() {
   const [ocultarValores, setOcultarValores] = useState(false);
   const mostrar = !ocultarValores;
 
-  useEffect(() => {
-    setTodos(getProdutos());
+  // Modais de venda
+  const [vendaRapidaOpen, setVendaRapidaOpen] = useState(false);
+  const [vendendo, setVendendo] = useState<Produto | null>(null);
+  const [reciboAberto, setReciboAberto] = useState(false);
+  const [produtoRecibo, setProdutoRecibo] = useState<Produto | null>(null);
+  const [toastVenda, setToastVenda] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+
+  const reload = useCallback(async () => {
+    const ps = await loadProdutos();
+    setTodos(ps);
   }, []);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  const handleAbrirVenda = (produto: Produto) => {
+    setVendaRapidaOpen(false);
+    setVendendo(produto);
+  };
+
+  const handleSaveVenda = async (updates: Partial<Produto>, produtoRecebido?: ProdutoRecebidoData) => {
+    if (!vendendo) return;
+    const valorStr = updates.valorVenda
+      ? updates.valorVenda.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+      : '';
+    await updateProduto(vendendo.id, updates);
+    if (produtoRecebido) {
+      const cod = await getNextCodigo();
+      await addProduto({
+        ...produtoRecebido,
+        codigo: cod,
+        status: 'EM_ESTOQUE',
+        fotos: [],
+      });
+    }
+    const vendido: Produto = { ...vendendo, ...updates } as Produto;
+    setProdutoRecibo(vendido);
+    setReciboAberto(true);
+    setToastMsg(`${vendendo.modelo} ${vendendo.linha} vendido por ${valorStr}!`);
+    setToastVenda(true);
+    await reload();
+    setVendendo(null);
+  };
 
   // Meses disponíveis com vendas
   const mesesDisponiveis = useMemo(() => {
@@ -92,6 +138,51 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+
+      {/* Botão grande: Realizar Venda */}
+      <button
+        onClick={() => setVendaRapidaOpen(true)}
+        className="group relative w-full overflow-hidden rounded-2xl p-5 md:p-6 text-left transition-all hover:scale-[1.01] active:scale-[0.99]"
+        style={{
+          background: 'linear-gradient(135deg, #2E78B7 0%, #1a5a8f 50%, #3B3B4F 100%)',
+          boxShadow: '0 12px 40px rgba(46,120,183,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+        }}
+      >
+        {/* Textura decorativa */}
+        <div
+          className="absolute inset-0 opacity-20 pointer-events-none"
+          style={{
+            backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(90,170,74,0.2) 0%, transparent 40%)',
+          }}
+        />
+        <div className="relative flex items-center gap-4 md:gap-5">
+          {/* Ícone */}
+          <div
+            className="w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:rotate-[-6deg]"
+            style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)' }}
+          >
+            <span className="text-3xl md:text-4xl">💸</span>
+          </div>
+          {/* Texto */}
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] md:text-xs font-bold tracking-[0.25em] uppercase text-white/60">
+              Atalho rápido
+            </p>
+            <h2 className="text-lg md:text-2xl font-extrabold text-white tracking-tight mt-0.5">
+              Realizar Venda
+            </h2>
+            <p className="text-xs md:text-sm text-white/70 mt-0.5 hidden sm:block">
+              Busque pelo código ou modelo · ou cadastre um produto do fornecedor
+            </p>
+          </div>
+          {/* Arrow */}
+          <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center transition-all group-hover:translate-x-1" style={{ background: 'rgba(255,255,255,0.2)' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+              <path d="M5 12h14M13 5l7 7-7 7" />
+            </svg>
+          </div>
+        </div>
+      </button>
 
       {/* Cards de estatísticas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -204,6 +295,32 @@ export default function Dashboard() {
           </div>
         </Link>
       </div>
+
+      {/* Modais de venda */}
+      <VendaRapidaModal
+        open={vendaRapidaOpen}
+        onClose={() => setVendaRapidaOpen(false)}
+        produtos={todos}
+        onSelect={handleAbrirVenda}
+        onFornecedorCriado={reload}
+      />
+      <VendaModal
+        open={!!vendendo}
+        onClose={() => setVendendo(null)}
+        onSave={handleSaveVenda}
+        produto={vendendo}
+      />
+      <ReciboModal
+        open={reciboAberto}
+        onClose={() => { setReciboAberto(false); setProdutoRecibo(null); }}
+        produto={produtoRecibo}
+      />
+      <Toast
+        open={toastVenda}
+        onClose={() => setToastVenda(false)}
+        tipo="venda"
+        mensagem={toastMsg}
+      />
     </div>
   );
 }
