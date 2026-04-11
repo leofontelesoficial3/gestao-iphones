@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { Produto } from '@/types';
+import { corSuave } from '@/lib/cores';
 import { loadProdutos } from '@/lib/storage';
 
 const fmt = (v: number) =>
@@ -143,7 +144,11 @@ export default function VendasPage() {
           <p className="py-10 text-center text-gray-400">Nenhuma venda encontrada.</p>
         )}
         {filtradas.map(p => (
-          <div key={p.id} className="bg-white rounded-xl shadow p-3 space-y-2">
+          <div
+            key={p.id}
+            className="rounded-xl shadow p-3 space-y-2"
+            style={{ background: corSuave(p.cor) }}
+          >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 <p className="font-bold text-gray-800 text-sm truncate">
@@ -247,7 +252,11 @@ export default function VendasPage() {
                 </tr>
               )}
               {filtradas.map(p => (
-                <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
+                <tr
+                  key={p.id}
+                  className="border-b border-gray-50 transition-colors"
+                  style={{ background: corSuave(p.cor) }}
+                >
                   <td className="py-2.5 px-3 text-gray-600">
                     {p.dataVenda
                       ? new Date(p.dataVenda + 'T12:00:00').toLocaleDateString('pt-BR')

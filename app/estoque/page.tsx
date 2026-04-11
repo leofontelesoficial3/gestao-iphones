@@ -10,6 +10,7 @@ import CodigoModal from '@/components/CodigoModal';
 import Toast from '@/components/Toast';
 import ReciboModal from '@/components/ReciboModal';
 import { useAuth } from '@/components/AuthProvider';
+import { corSuave } from '@/lib/cores';
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -258,7 +259,11 @@ export default function EstoquePage() {
           <p className="py-10 text-center text-gray-400">Nenhum produto encontrado.</p>
         )}
         {filtrados.map(p => (
-          <div key={p.id} className="bg-white rounded-xl shadow p-4 space-y-3">
+          <div
+            key={p.id}
+            className="rounded-xl shadow p-4 space-y-3"
+            style={{ background: corSuave(p.cor) }}
+          >
             {/* Cabeçalho do card */}
             <div className="flex items-start gap-3">
               {/* Foto principal */}
@@ -418,7 +423,11 @@ export default function EstoquePage() {
                 </tr>
               )}
               {filtrados.map(p => (
-                <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
+                <tr
+                  key={p.id}
+                  className="border-b border-gray-50 transition-colors"
+                  style={{ background: corSuave(p.cor) }}
+                >
                   <td className="py-2 px-2">
                     <div
                       className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center cursor-pointer"

@@ -9,6 +9,7 @@ import ReciboModal from '@/components/ReciboModal';
 import Toast from '@/components/Toast';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
+import { corSuave } from '@/lib/cores';
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -254,7 +255,11 @@ export default function Dashboard() {
               </thead>
               <tbody>
                 {ultimas.map(p => (
-                  <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
+                  <tr
+                    key={p.id}
+                    className="border-b border-gray-50 transition-colors"
+                    style={{ background: corSuave(p.cor) }}
+                  >
                     <td className="py-2 px-2 font-medium">
                       {p.modelo} <span className="text-gray-400">{p.linha}</span>
                     </td>
