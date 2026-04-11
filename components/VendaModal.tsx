@@ -11,9 +11,11 @@ const FORMAS: { id: FormaPagamento; label: string; icon: string }[] = [
   { id: 'PRODUTO_RECEBIDO',  label: 'Produto Recebido',  icon: '📦' },
 ];
 
+// Taxa de crédito: n + 2,89% (1x = 3,89%, 2x = 4,89%, ..., 18x = 20,89%)
+const TAXA_CREDITO_BASE = 2.89;
 const PARCELAS = Array.from({ length: 18 }, (_, i) => {
   const n = i + 1;
-  return { n, pct: parseFloat((n + 2.99).toFixed(2)) };
+  return { n, pct: parseFloat((n + TAXA_CREDITO_BASE).toFixed(2)) };
 });
 
 const MODELOS = [
@@ -102,7 +104,7 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
 
   // Acréscimo calculado sobre o valor de CADA método com taxa
   const acrescimoDebito  = (valores.DEBITO  || 0) * 0.0299;
-  const acrescimoCredito = (valores.CREDITO || 0) * (parcelas + 2.99) / 100;
+  const acrescimoCredito = (valores.CREDITO || 0) * (parcelas + TAXA_CREDITO_BASE) / 100;
   const totalAcrescimo   = parseFloat((acrescimoDebito + acrescimoCredito).toFixed(2));
 
   // Soma de valores informados (exceto Produto Recebido, que é automático)
@@ -254,8 +256,8 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
                   pctLabel = '2,99%';
                 }
                 if (f.id === 'CREDITO' && sel) {
-                  acrescimoForma = val * (parcelas + 2.99) / 100;
-                  pctLabel = `${(parcelas + 2.99).toFixed(2)}%`;
+                  acrescimoForma = val * (parcelas + TAXA_CREDITO_BASE) / 100;
+                  pctLabel = `${(parcelas + TAXA_CREDITO_BASE).toFixed(2)}%`;
                 }
 
                 return (
@@ -501,7 +503,7 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
               const v = f.id === 'PRODUTO_RECEBIDO' ? valorProdutoRecebido : (valores[f.id] || 0);
               let acr = 0;
               if (f.id === 'DEBITO') acr = v * 0.0299;
-              if (f.id === 'CREDITO') acr = v * (parcelas + 2.99) / 100;
+              if (f.id === 'CREDITO') acr = v * (parcelas + TAXA_CREDITO_BASE) / 100;
               return (
                 <div key={f.id} className="flex justify-between text-gray-600">
                   <span>{f.icon} {f.label}{acr > 0 ? ` (−${fmt(acr)} taxa)` : ''}</span>
