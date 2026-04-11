@@ -29,10 +29,10 @@ export default function VendedoresPage() {
   const [sucesso, setSucesso] = useState('');
   const [showForm, setShowForm] = useState(false);
 
-  const load = useCallback(() => {
-    const v = getVendedoresDaConta(conta);
-    setVendedores(v.map(u => ({ usuario: u.usuario, nome: u.nome })));
-    const info = getLimiteVendedores(conta);
+  const load = useCallback(async () => {
+    const v = await getVendedoresDaConta(conta);
+    setVendedores(v.map((u: any) => ({ usuario: u.usuario, nome: u.nome })));
+    const info = await getLimiteVendedores(conta);
     setLimite(info.limite);
     setPlano2(info.plano);
   }, [conta]);
@@ -43,23 +43,23 @@ export default function VendedoresPage() {
 
   const podeAdicionar = vendedores.length < limite;
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro('');
     setSucesso('');
     if (senha.length < 4) { setErro('A senha deve ter pelo menos 4 caracteres.'); return; }
-    const result = adicionarVendedor(conta, usuario.toLowerCase().replace(/\s/g, ''), nome, senha);
+    const result = await adicionarVendedor(conta, usuario.toLowerCase().replace(/\s/g, ''), nome, senha);
     if (!result.ok) { setErro(result.erro || 'Erro ao adicionar.'); return; }
     setSucesso(`Vendedor "${nome}" criado com sucesso!`);
     setNome(''); setUsuario(''); setSenha('');
     setShowForm(false);
-    load();
+    await load();
   };
 
-  const handleRemove = (usr: string, nomeV: string) => {
+  const handleRemove = async (usr: string, nomeV: string) => {
     if (!confirm(`Remover o vendedor "${nomeV}"?`)) return;
-    removerVendedor(conta, usr);
-    load();
+    await removerVendedor(conta, usr);
+    await load();
   };
 
   return (

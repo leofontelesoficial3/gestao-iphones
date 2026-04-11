@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useMemo } from 'react';
 import { Produto } from '@/types';
-import { getProdutos } from '@/lib/storage';
+import { loadProdutos } from '@/lib/storage';
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -20,11 +20,12 @@ export default function VendasPage() {
   const [ordem, setOrdem] = useState<'recente' | 'antiga'>('recente');
 
   useEffect(() => {
-    const todos = getProdutos();
-    const v = todos
-      .filter(p => p.status === 'VENDIDO')
-      .sort((a, b) => (b.dataVenda ?? '').localeCompare(a.dataVenda ?? ''));
-    setVendas(v);
+    loadProdutos().then(todos => {
+      const v = todos
+        .filter(p => p.status === 'VENDIDO')
+        .sort((a, b) => (b.dataVenda ?? '').localeCompare(a.dataVenda ?? ''));
+      setVendas(v);
+    });
   }, []);
 
   const mesesDisponiveis = useMemo(() => {

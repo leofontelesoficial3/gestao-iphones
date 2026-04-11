@@ -11,41 +11,52 @@ interface Props {
 
 export default function FotosModal({ open, onClose, fotos, onUpdate, produtoNome }: Props) {
   const [ampliada, setAmpliada] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   if (!open) return null;
 
-  const comprimirImagem = (file: File): Promise<string> =>
-    new Promise(resolve => {
-      const reader = new FileReader();
-      reader.onload = e => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX = 800;
-          let { width, height } = img;
-          if (width > MAX) { height = (height * MAX) / width; width = MAX; }
-          if (height > MAX) { width = (width * MAX) / height; height = MAX; }
-          canvas.width = width;
-          canvas.height = height;
-          canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
-          resolve(canvas.toDataURL('image/jpeg', 0.75));
-        };
-        img.src = e.target!.result as string;
-      };
-      reader.readAsDataURL(file);
-    });
-
   const handleAddFotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
-    const novas = await Promise.all(files.map(comprimirImagem));
-    onUpdate([...fotos, ...novas]);
-    e.target.value = '';
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      files.forEach(f => formData.append('files', f));
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        onUpdate([...fotos, ...data.urls]);
+      }
+    } catch (err) {
+      console.error('Erro no upload:', err);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
   };
 
-  const handleRemover = (idx: number) => {
+  const handleRemover = async (idx: number) => {
     if (!confirm('Remover esta foto?')) return;
+    const url = fotos[idx];
+
+    // Tenta deletar do Blob se for URL (não base64)
+    if (url.startsWith('http')) {
+      try {
+        await fetch('/api/upload', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url }),
+        });
+      } catch {}
+    }
+
     onUpdate(fotos.filter((_, i) => i !== idx));
   };
 
@@ -97,9 +108,12 @@ export default function FotosModal({ open, onClose, fotos, onUpdate, produtoNome
             <span className="text-sm text-gray-400">{fotos.length} foto(s)</span>
             <button
               onClick={() => inputRef.current?.click()}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 text-sm"
+              disabled={uploading}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm text-white ${
+                uploading ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
-              + Adicionar Fotos
+              {uploading ? 'Enviando...' : '+ Adicionar Fotos'}
             </button>
             <input
               ref={inputRef}

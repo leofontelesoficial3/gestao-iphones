@@ -13,20 +13,18 @@ export default function LoginPage() {
   const [erro, setErro] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro('');
     setLoading(true);
 
-    setTimeout(() => {
-      const ok = login(usuario, senha);
-      if (ok) {
-        router.push('/');
-      } else {
-        setErro('Usuário ou senha incorretos');
-      }
-      setLoading(false);
-    }, 400);
+    const ok = await login(usuario, senha);
+    if (ok) {
+      router.push('/');
+    } else {
+      setErro('Usuário ou senha incorretos');
+    }
+    setLoading(false);
   };
 
   return (

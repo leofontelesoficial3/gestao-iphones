@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { Produto } from '@/types';
-import { getProdutos, addProduto, updateProduto, deleteProduto, getNextCodigo } from '@/lib/storage';
+import { loadProdutos, addProduto, updateProduto, deleteProduto, getNextCodigo } from '@/lib/storage';
 import ProdutoModal from '@/components/ProdutoModal';
 import VendaModal, { ProdutoRecebidoData } from '@/components/VendaModal';
 import FotosModal from '@/components/FotosModal';
@@ -54,9 +54,11 @@ export default function EstoquePage() {
   // Mostra valores? Admin + toggle ligado
   const mostrarValores = isAdmin && !ocultarValores;
 
-  const load = useCallback(() => {
-    setProdutos(getProdutos());
-    setNextCodigo(getNextCodigo());
+  const load = useCallback(async () => {
+    const prods = await loadProdutos();
+    setProdutos(prods);
+    const cod = await getNextCodigo();
+    setNextCodigo(cod);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -69,59 +71,59 @@ export default function EstoquePage() {
     return matchStatus && matchQ;
   });
 
-  const handleSaveProduto = (data: Omit<Produto, 'id'>) => {
+  const handleSaveProduto = async (data: Omit<Produto, 'id'>) => {
     if (editando) {
-      updateProduto(editando.id, data);
+      await updateProduto(editando.id, data);
     } else {
-      addProduto(data);
+      await addProduto(data);
       setToastMsg(`${data.modelo} ${data.linha} adicionado ao estoque!`);
       setToastEstoque(true);
     }
-    load();
+    await load();
     setEditando(null);
   };
 
-  const handleSaveVenda = (updates: Partial<Produto>, produtoRecebido?: ProdutoRecebidoData) => {
+  const handleSaveVenda = async (updates: Partial<Produto>, produtoRecebido?: ProdutoRecebidoData) => {
     if (vendendo) {
       const valor = updates.valorVenda ? fmt(updates.valorVenda) : '';
-      updateProduto(vendendo.id, updates);
+      await updateProduto(vendendo.id, updates);
       if (produtoRecebido) {
-        addProduto({
+        const cod = await getNextCodigo();
+        await addProduto({
           ...produtoRecebido,
-          codigo: getNextCodigo(),
+          codigo: cod,
           status: 'EM_ESTOQUE',
           fotos: [],
         });
       }
-      // Monta o produto atualizado para o recibo
       const vendido: Produto = { ...vendendo, ...updates } as Produto;
       setProdutoRecibo(vendido);
       setReciboAberto(true);
       setToastMsg(`${vendendo.modelo} ${vendendo.linha} vendido por ${valor}!`);
       setToastVenda(true);
-      load();
+      await load();
       setVendendo(null);
     }
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Tem certeza que deseja excluir este produto?')) {
-      deleteProduto(id);
-      load();
+      await deleteProduto(id);
+      await load();
     }
   };
 
-  const handleFotosUpdate = (fotos: string[]) => {
+  const handleFotosUpdate = async (fotos: string[]) => {
     if (verFotos) {
-      updateProduto(verFotos.id, { fotos });
+      await updateProduto(verFotos.id, { fotos });
       setVerFotos(prev => prev ? { ...prev, fotos } : null);
-      load();
+      await load();
     }
   };
 
-  const handleDesfazerVenda = (p: Produto) => {
+  const handleDesfazerVenda = async (p: Produto) => {
     if (confirm('Desfazer venda e retornar ao estoque?')) {
-      updateProduto(p.id, {
+      await updateProduto(p.id, {
         status: 'EM_ESTOQUE',
         dataVenda: undefined,
         valorVenda: undefined,
@@ -130,7 +132,7 @@ export default function EstoquePage() {
         contato: undefined,
         lucro: undefined,
       });
-      load();
+      await load();
     }
   };
 

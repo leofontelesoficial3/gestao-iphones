@@ -15,7 +15,7 @@ export default function RegistroPage() {
   const [erro, setErro] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro('');
 
@@ -29,17 +29,14 @@ export default function RegistroPage() {
     }
 
     setLoading(true);
-    setTimeout(() => {
-      const result = registrar({ nomeLoja, nomeAdmin, usuario, senha });
-      if (!result.ok) {
-        setErro(result.erro || 'Erro ao criar conta.');
-        setLoading(false);
-        return;
-      }
-      // Faz login automático
-      login(usuario, senha);
-      router.push('/');
-    }, 500);
+    const result = await registrar({ nomeLoja, nomeAdmin, usuario, senha });
+    if (!result.ok) {
+      setErro(result.erro || 'Erro ao criar conta.');
+      setLoading(false);
+      return;
+    }
+    await login(usuario, senha);
+    router.push('/');
   };
 
   return (

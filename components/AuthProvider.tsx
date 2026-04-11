@@ -8,13 +8,13 @@ interface AuthCtx {
   isAdmin: boolean;
   perfil: Perfil | null;
   conta: string;
-  login: (usuario: string, senha: string) => boolean;
+  login: (usuario: string, senha: string) => Promise<boolean>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthCtx>({
   user: null, loading: true, isAdmin: false, perfil: null, conta: 'default',
-  login: () => false, logout: () => {},
+  login: async () => false, logout: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -28,8 +28,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  const login = (usuario: string, senha: string): boolean => {
-    const u = doLogin(usuario, senha);
+  const login = async (usuario: string, senha: string): Promise<boolean> => {
+    const u = await doLogin(usuario, senha);
     if (u) { setUser(u); return true; }
     return false;
   };

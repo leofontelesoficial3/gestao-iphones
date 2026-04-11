@@ -1,72 +1,68 @@
 import { Produto, Stats } from '@/types';
-import { seedProdutos } from './seedData';
 import { getLoggedUser } from './auth';
 
-const SEED_VERSION = 'v3';
-
-function getStorageKey(): string {
+function getConta(): string {
   const user = getLoggedUser();
-  if (!user || user.conta === 'default') return 'gestao_iphones_produtos';
-  return `gestao_iphones_${user.conta}`;
+  return user?.conta || 'default';
 }
 
-function isDefaultAccount(): boolean {
-  const user = getLoggedUser();
-  return !user || user.conta === 'default';
+export async function getProdutosAsync(): Promise<Produto[]> {
+  const res = await fetch(`/api/produtos?conta=${getConta()}`);
+  if (!res.ok) return [];
+  return res.json();
 }
+
+// Versão síncrona mantida para compatibilidade (usa cache local)
+let _cache: Produto[] = [];
+let _cacheLoaded = false;
 
 export function getProdutos(): Produto[] {
-  if (typeof window === 'undefined') return [];
-  const key = getStorageKey();
-
-  if (isDefaultAccount()) {
-    // Conta padrão (admin/vendedor): usa seed
-    const versao = localStorage.getItem(key + '_version');
-    if (versao !== SEED_VERSION) {
-      localStorage.setItem(key, JSON.stringify(seedProdutos));
-      localStorage.setItem(key + '_version', SEED_VERSION);
-      return seedProdutos;
-    }
-  }
-
-  const raw = localStorage.getItem(key);
-  if (!raw) {
-    if (isDefaultAccount()) return seedProdutos;
-    return []; // Contas novas começam vazias
-  }
-  return JSON.parse(raw) as Produto[];
+  return _cache;
 }
 
-export function saveProdutos(produtos: Produto[]): void {
-  localStorage.setItem(getStorageKey(), JSON.stringify(produtos));
+export async function loadProdutos(): Promise<Produto[]> {
+  _cache = await getProdutosAsync();
+  _cacheLoaded = true;
+  return _cache;
 }
 
-export function addProduto(produto: Omit<Produto, 'id'>): Produto {
-  const produtos = getProdutos();
-  const newProduto: Produto = { ...produto, id: crypto.randomUUID() };
-  saveProdutos([...produtos, newProduto]);
-  return newProduto;
+export function isLoaded(): boolean {
+  return _cacheLoaded;
 }
 
-export function updateProduto(id: string, updates: Partial<Produto>): void {
-  const produtos = getProdutos();
-  const updated = produtos.map(p => p.id === id ? { ...p, ...updates } : p);
-  saveProdutos(updated);
+export async function addProduto(produto: Omit<Produto, 'id'>): Promise<Produto> {
+  const res = await fetch('/api/produtos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...produto, conta: getConta() }),
+  });
+  const novo = await res.json();
+  _cache = [..._cache, novo];
+  return novo;
 }
 
-export function deleteProduto(id: string): void {
-  const produtos = getProdutos();
-  saveProdutos(produtos.filter(p => p.id !== id));
+export async function updateProduto(id: string, updates: Partial<Produto>): Promise<void> {
+  await fetch('/api/produtos', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, ...updates }),
+  });
+  _cache = _cache.map(p => p.id === id ? { ...p, ...updates } : p);
 }
 
-export function getNextCodigo(): number {
-  const produtos = getProdutos();
-  if (produtos.length === 0) return 10001;
-  return Math.max(...produtos.map(p => p.codigo)) + 1;
+export async function deleteProduto(id: string): Promise<void> {
+  await fetch(`/api/produtos?id=${id}`, { method: 'DELETE' });
+  _cache = _cache.filter(p => p.id !== id);
+}
+
+export async function getNextCodigo(): Promise<number> {
+  const res = await fetch(`/api/produtos/next-codigo?conta=${getConta()}`);
+  const data = await res.json();
+  return data.codigo;
 }
 
 export function getStats(): Stats {
-  const produtos = getProdutos();
+  const produtos = _cache;
   const vendidos = produtos.filter(p => p.status === 'VENDIDO');
   const emEstoque = produtos.filter(p => p.status === 'EM_ESTOQUE');
 
@@ -78,3 +74,6 @@ export function getStats(): Stats {
     qtdVendidos: vendidos.length,
   };
 }
+
+// Mantido para compatibilidade mas não faz nada (dados estão no banco)
+export function saveProdutos(_produtos: Produto[]): void {}

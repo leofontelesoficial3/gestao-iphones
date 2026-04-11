@@ -9,6 +9,8 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "@vercel/blob": "^2.3.3",
     "jsbarcode": "^3.12.3",
     "next": "16.2.2",
     "qrcode": "^1.5.4",
