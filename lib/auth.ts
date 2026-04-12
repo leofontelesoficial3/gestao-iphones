@@ -75,7 +75,7 @@ export function getPlano(_conta: string): Plano {
 
 export function setPlano(_conta: string, _plano: Plano): void {}
 
-export async function getVendedoresDaConta(conta: string): Promise<{ usuario: string; nome: string }[]> {
+export async function getVendedoresDaConta(conta: string): Promise<{ usuario: string; nome: string; perfil: Perfil }[]> {
   const res = await fetch(`/api/vendedores?conta=${conta}`);
   const data = await res.json();
   return data.vendedores;
@@ -87,11 +87,21 @@ export async function getLimiteVendedores(conta: string): Promise<{ limite: numb
   return { limite: data.limite, atual: data.atual, plano: data.plano };
 }
 
-export async function adicionarVendedor(conta: string, usuario: string, nome: string, senha: string): Promise<{ ok: boolean; erro?: string }> {
+/**
+ * Adiciona um membro à equipe. `perfil` define o cargo
+ * ('admin' ou 'vendedor'). Se omitido, default = 'vendedor'.
+ */
+export async function adicionarVendedor(
+  conta: string,
+  usuario: string,
+  nome: string,
+  senha: string,
+  perfil: Perfil = 'vendedor',
+): Promise<{ ok: boolean; erro?: string }> {
   const res = await fetch('/api/vendedores', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ conta, usuario, nome, senha }),
+    body: JSON.stringify({ conta, usuario, nome, senha, perfil }),
   });
   if (!res.ok) {
     const err = await res.json();
