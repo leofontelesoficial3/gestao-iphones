@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 
 // Taxas baseadas na tabela GRANNCOOB / PAG SEGURO (02/09/2024)
 const TAXAS: Record<string, Record<string, number>> = {
@@ -37,32 +37,43 @@ export default function SimulacaoPage() {
   const [valor, setValor] = useState('');
   const [bandeira, setBandeira] = useState('MASTER/VISA');
   const [parcela, setParcela] = useState('1x');
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const parcelasDisponiveis = useMemo(() => Object.keys(TAXAS[bandeira] || {}), [bandeira]);
 
   // Ajustar parcela se não existir na bandeira selecionada
   const parcelaAtual = parcelasDisponiveis.includes(parcela) ? parcela : parcelasDisponiveis[0] || '1x';
 
-  const valorNum = parseFloat(valor.replace(/\./g, '').replace(',', '.')) || 0;
+  // Scroll até o botão ativo quando muda
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    const activeBtn = scrollRef.current.querySelector('[data-active="true"]') as HTMLElement;
+    if (activeBtn) {
+      activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [parcelaAtual, bandeira]);
+
+  const valorReceber = parseFloat(valor.replace(/\./g, '').replace(',', '.')) || 0;
   const taxa = TAXAS[bandeira]?.[parcelaAtual];
   const taxaValida = taxa != null && taxa > 0;
 
-  const valorTaxa = taxaValida ? valorNum * (taxa / 100) : 0;
-  const valorLiquido = valorNum - valorTaxa;
+  // Fórmula: valorVenda = valorReceber / (1 - taxa/100)
+  const valorVenda = taxaValida && valorReceber > 0 ? valorReceber / (1 - taxa / 100) : 0;
+  const valorTaxa = valorVenda - valorReceber;
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-xl md:text-2xl font-bold" style={{ color: '#3B3B4F' }}>Simulação</h1>
-        <p className="text-sm text-gray-400 mt-1">Simule os valores recebidos na máquina de cartão</p>
+        <p className="text-sm text-gray-400 mt-1">Calcule quanto cobrar na maquineta para receber o valor desejado</p>
       </div>
 
       {/* Formulário */}
       <div className="bg-white rounded-xl shadow p-5 space-y-5">
-        {/* Valor */}
+        {/* Valor a Receber */}
         <div>
-          <label className="label">Valor da Venda (R$)</label>
+          <label className="label">Valor a Receber (R$)</label>
           <input
             type="text"
             inputMode="decimal"
@@ -75,6 +86,9 @@ export default function SimulacaoPage() {
               setValor(raw);
             }}
           />
+          <p className="text-[11px] text-gray-400 mt-1 text-center">
+            Digite quanto você quer receber líquido
+          </p>
         </div>
 
         {/* Bandeira */}
@@ -103,10 +117,14 @@ export default function SimulacaoPage() {
           </div>
         </div>
 
-        {/* Parcelas */}
+        {/* Parcelas - Scroll horizontal */}
         <div>
           <label className="label">Parcelas</label>
-          <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5">
+          <div
+            ref={scrollRef}
+            className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
+          >
             {parcelasDisponiveis.map(p => {
               const ativo = parcelaAtual === p;
               const t = TAXAS[bandeira][p];
@@ -115,18 +133,24 @@ export default function SimulacaoPage() {
                 <button
                   key={p}
                   type="button"
+                  data-active={ativo}
                   disabled={indisponivel}
                   onClick={() => setParcela(p)}
-                  className={`py-2 rounded-lg text-xs font-bold transition-all ${
+                  className={`flex-shrink-0 snap-center px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
                     indisponivel
                       ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
                       : ativo
-                        ? 'text-white shadow'
+                        ? 'text-white shadow-lg scale-105'
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                   style={ativo && !indisponivel ? { background: '#2E78B7' } : {}}
                 >
                   {p.toUpperCase()}
+                  {!indisponivel && t != null && (
+                    <span className={`block text-[10px] font-medium mt-0.5 ${ativo ? 'text-blue-100' : 'text-gray-400'}`}>
+                      {t.toFixed(2).replace('.', ',')}%
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -135,16 +159,16 @@ export default function SimulacaoPage() {
       </div>
 
       {/* Resultado */}
-      {valorNum > 0 && taxaValida && (
+      {valorReceber > 0 && taxaValida && (
         <div className="bg-white rounded-xl shadow overflow-hidden">
           <div className="p-5 space-y-4">
             <h3 className="font-bold text-gray-800">Resultado da Simulação</h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Valor bruto */}
+              {/* Cobrar na maquineta */}
               <div className="rounded-xl p-4 text-center" style={{ background: '#eef5fb' }}>
-                <p className="text-xs font-medium text-gray-500 mb-1">Valor Bruto</p>
-                <p className="text-lg font-bold" style={{ color: '#2E78B7' }}>{fmt(valorNum)}</p>
+                <p className="text-xs font-medium text-gray-500 mb-1">Cobrar na Maquineta</p>
+                <p className="text-xl font-bold" style={{ color: '#2E78B7' }}>{fmt(valorVenda)}</p>
               </div>
 
               {/* Taxa */}
@@ -155,10 +179,10 @@ export default function SimulacaoPage() {
                 <p className="text-lg font-bold text-red-500">- {fmt(valorTaxa)}</p>
               </div>
 
-              {/* Valor líquido */}
+              {/* Você recebe */}
               <div className="rounded-xl p-4 text-center" style={{ background: '#eef7ec' }}>
-                <p className="text-xs font-medium text-gray-500 mb-1">Valor Líquido</p>
-                <p className="text-lg font-bold" style={{ color: '#5AAA4A' }}>{fmt(valorLiquido)}</p>
+                <p className="text-xs font-medium text-gray-500 mb-1">Você Recebe</p>
+                <p className="text-xl font-bold" style={{ color: '#5AAA4A' }}>{fmt(valorReceber)}</p>
               </div>
             </div>
 
@@ -168,7 +192,7 @@ export default function SimulacaoPage() {
                 <p className="text-xs font-medium text-gray-500 mb-2">Valor por Parcela (para o cliente)</p>
                 <div className="flex items-baseline gap-2">
                   <span className="text-xl font-bold" style={{ color: '#3B3B4F' }}>
-                    {parseInt(parcelaAtual)}x de {fmt(valorNum / parseInt(parcelaAtual))}
+                    {parseInt(parcelaAtual)}x de {fmt(valorVenda / parseInt(parcelaAtual))}
                   </span>
                 </div>
               </div>
@@ -189,10 +213,10 @@ export default function SimulacaoPage() {
               <tr className="bg-gray-50">
                 <th className="text-left px-4 py-2 text-xs text-gray-500 font-medium">Parcela</th>
                 <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">Taxa</th>
-                {valorNum > 0 && (
+                {valorReceber > 0 && (
                   <>
-                    <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">Desconto</th>
-                    <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">Líquido</th>
+                    <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">Cobrar</th>
+                    <th className="text-right px-4 py-2 text-xs text-gray-500 font-medium">Recebe</th>
                   </>
                 )}
               </tr>
@@ -201,8 +225,7 @@ export default function SimulacaoPage() {
               {parcelasDisponiveis.map(p => {
                 const t = TAXAS[bandeira][p];
                 if (t == null) return null;
-                const desc = valorNum * (t / 100);
-                const liq = valorNum - desc;
+                const cobrar = valorReceber / (1 - t / 100);
                 const isActive = p === parcelaAtual;
                 return (
                   <tr
@@ -218,13 +241,13 @@ export default function SimulacaoPage() {
                     <td className="px-4 py-2.5 text-right text-gray-600">
                       {t.toFixed(2).replace('.', ',')}%
                     </td>
-                    {valorNum > 0 && (
+                    {valorReceber > 0 && (
                       <>
-                        <td className="px-4 py-2.5 text-right text-red-500 font-medium">
-                          - {fmt(desc)}
+                        <td className="px-4 py-2.5 text-right font-bold" style={{ color: '#2E78B7' }}>
+                          {fmt(cobrar)}
                         </td>
                         <td className="px-4 py-2.5 text-right font-bold" style={{ color: '#5AAA4A' }}>
-                          {fmt(liq)}
+                          {fmt(valorReceber)}
                         </td>
                       </>
                     )}
