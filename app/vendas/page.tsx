@@ -2,7 +2,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Produto } from '@/types';
 import { corSuave } from '@/lib/cores';
-import { loadProdutos } from '@/lib/storage';
+import { loadProdutos, updateProduto } from '@/lib/storage';
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -19,6 +19,34 @@ export default function VendasPage() {
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
   const [ordem, setOrdem] = useState<'recente' | 'antiga'>('recente');
+  const [desfazendo, setDesfazendo] = useState<string | null>(null);
+
+  async function handleDesfazerVenda(p: Produto) {
+    const ok = confirm(
+      `Deseja desfazer a venda do produto "${p.modelo} ${p.gb} ${p.cor}"?\n\nO produto voltará para o estoque.`
+    );
+    if (!ok) return;
+    setDesfazendo(p.id);
+    try {
+      await updateProduto(p.id, {
+        status: 'EM_ESTOQUE',
+        dataVenda: undefined,
+        valorVenda: undefined,
+        custos: undefined,
+        cliente: undefined,
+        contato: undefined,
+        lucro: undefined,
+        formasPagamento: undefined,
+        parcelasCredito: undefined,
+        acrescimo: undefined,
+      });
+      setVendas(prev => prev.filter(v => v.id !== p.id));
+    } catch {
+      alert('Erro ao desfazer venda. Tente novamente.');
+    } finally {
+      setDesfazendo(null);
+    }
+  }
 
   useEffect(() => {
     loadProdutos().then(todos => {
@@ -195,6 +223,14 @@ export default function VendasPage() {
                 </p>
               </div>
             </div>
+
+            <button
+              onClick={() => handleDesfazerVenda(p)}
+              disabled={desfazendo === p.id}
+              className="w-full text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg py-1.5 transition-colors disabled:opacity-50"
+            >
+              {desfazendo === p.id ? 'Desfazendo...' : '↩ Desfazer Venda'}
+            </button>
           </div>
         ))}
 
@@ -241,12 +277,13 @@ export default function VendasPage() {
                 <th className="text-right py-3 px-3 text-gray-500 font-medium">Custos</th>
                 <th className="text-right py-3 px-3 text-gray-500 font-medium">Venda</th>
                 <th className="text-right py-3 px-3 text-gray-500 font-medium">Lucro</th>
+                <th className="text-center py-3 px-3 text-gray-500 font-medium">Ação</th>
               </tr>
             </thead>
             <tbody>
               {filtradas.length === 0 && (
                 <tr>
-                  <td colSpan={11} className="py-10 text-center text-gray-400">
+                  <td colSpan={12} className="py-10 text-center text-gray-400">
                     Nenhuma venda encontrada.
                   </td>
                 </tr>
@@ -286,6 +323,15 @@ export default function VendasPage() {
                   }`}>
                     {p.lucro !== undefined ? fmt(p.lucro) : '—'}
                   </td>
+                  <td className="py-2.5 px-3 text-center">
+                    <button
+                      onClick={() => handleDesfazerVenda(p)}
+                      disabled={desfazendo === p.id}
+                      className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded px-2 py-1 transition-colors disabled:opacity-50"
+                    >
+                      {desfazendo === p.id ? '...' : '↩ Desfazer'}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -305,6 +351,7 @@ export default function VendasPage() {
                   <td className="py-3 px-3 text-right font-bold text-green-700">
                     {fmt(totalLucro)}
                   </td>
+                  <td></td>
                 </tr>
               </tfoot>
             )}
