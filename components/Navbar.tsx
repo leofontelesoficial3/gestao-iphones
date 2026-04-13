@@ -8,6 +8,8 @@ const allLinks = [
   { href: '/', label: 'Dashboard', icon: '📊', adminOnly: true },
   { href: '/estoque', label: 'Estoque', icon: '📦', adminOnly: false },
   { href: '/vendas', label: 'Vendas', icon: '💰', adminOnly: true },
+  { href: '/simulacao', label: 'Simulação', icon: '💳', adminOnly: true },
+  { href: '/despesas', label: 'Despesas', icon: '📋', adminOnly: true },
   { href: '/fornecedores', label: 'Fornecedores', icon: '🚚', adminOnly: true },
   { href: '/vendedores', label: 'Equipe', icon: '👥', adminOnly: true },
 ];
