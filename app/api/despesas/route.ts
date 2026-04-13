@@ -52,13 +52,29 @@ export async function POST(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   const body = await req.json();
-  const { id, pago } = body;
+  const { id, pago, descricao, valor, tipo, data_vencimento, data_fim } = body;
 
   if (!id) {
     return NextResponse.json({ error: 'ID é obrigatório.' }, { status: 400 });
   }
 
   const sql = getDb();
+
+  // Edição completa
+  if (descricao !== undefined) {
+    await sql`
+      UPDATE despesas
+      SET descricao = ${descricao},
+          valor = ${valor},
+          tipo = ${tipo},
+          data_vencimento = ${data_vencimento},
+          data_fim = ${data_fim || null}
+      WHERE id = ${id}
+    `;
+    return NextResponse.json({ ok: true });
+  }
+
+  // Toggle pago
   await sql`UPDATE despesas SET pago = ${!!pago} WHERE id = ${id}`;
 
   return NextResponse.json({ ok: true });
