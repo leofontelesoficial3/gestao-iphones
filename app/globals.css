@@ -43,3 +43,12 @@ body {
   color: #4b5563;
   margin-bottom: 0.25rem;
 }
+
+/* Oculta scrollbar mas mantém scroll funcional */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

@@ -95,18 +95,21 @@ export default function Navbar() {
         </button>
       </header>
 
-      {/* Mobile: barra inferior fixa */}
+      {/* Mobile: barra inferior fixa com scroll horizontal */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.1)]">
-        <div className="flex justify-around">
+        <div
+          className="flex overflow-x-auto scrollbar-hide"
+          style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           {links.map(link => (
             <Link
               key={link.href}
               href={link.href}
-              className="flex flex-col items-center py-2 px-4 min-w-[80px] transition-colors"
+              className="flex flex-col items-center py-2 px-3 min-w-[64px] flex-shrink-0 transition-colors"
               style={{ color: pathname === link.href ? '#2E78B7' : '#9ca3af' }}
             >
               <span className="text-xl">{link.icon}</span>
-              <span className="text-[11px] font-semibold mt-0.5">{link.label}</span>
+              <span className="text-[10px] font-semibold mt-0.5 whitespace-nowrap">{link.label}</span>
             </Link>
           ))}
         </div>
