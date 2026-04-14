@@ -2,7 +2,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Produto } from '@/types';
 import { corSuave } from '@/lib/cores';
-import { loadProdutos, updateProduto } from '@/lib/storage';
+import { loadProdutos, updateProduto, deleteProduto } from '@/lib/storage';
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -22,29 +22,51 @@ export default function VendasPage() {
   const [desfazendo, setDesfazendo] = useState<string | null>(null);
 
   async function handleDesfazerVenda(p: Produto) {
-    const ok = confirm(
-      `Deseja desfazer a venda do produto "${p.modelo} ${p.gb} ${p.cor}"?\n\nO produto voltará para o estoque.`
-    );
-    if (!ok) return;
-    setDesfazendo(p.id);
-    try {
-      await updateProduto(p.id, {
-        status: 'EM_ESTOQUE',
-        dataVenda: undefined,
-        valorVenda: undefined,
-        custos: undefined,
-        cliente: undefined,
-        contato: undefined,
-        lucro: undefined,
-        formasPagamento: undefined,
-        parcelasCredito: undefined,
-        acrescimo: undefined,
-      });
-      setVendas(prev => prev.filter(v => v.id !== p.id));
-    } catch {
-      alert('Erro ao desfazer venda. Tente novamente.');
-    } finally {
-      setDesfazendo(null);
+    const limparVenda = {
+      status: 'EM_ESTOQUE' as const,
+      dataVenda: undefined,
+      valorVenda: undefined,
+      custos: undefined,
+      cliente: undefined,
+      contato: undefined,
+      lucro: undefined,
+      formasPagamento: undefined,
+      parcelasCredito: undefined,
+      acrescimo: undefined,
+    };
+
+    if (p.fornecedorId) {
+      const escolha = prompt(
+        `Desfazer venda: "${p.modelo} ${p.gb} ${p.cor}"\n\nEste produto veio de um fornecedor.\n\nDigite:\n  1 — Manter no estoque\n  2 — Apagar do estoque\n\nOu cancele para voltar.`
+      );
+      if (!escolha) return;
+      setDesfazendo(p.id);
+      try {
+        if (escolha.trim() === '2') {
+          await deleteProduto(p.id);
+        } else {
+          await updateProduto(p.id, limparVenda);
+        }
+        setVendas(prev => prev.filter(v => v.id !== p.id));
+      } catch {
+        alert('Erro ao desfazer venda. Tente novamente.');
+      } finally {
+        setDesfazendo(null);
+      }
+    } else {
+      const ok = confirm(
+        `Deseja desfazer a venda do produto "${p.modelo} ${p.gb} ${p.cor}"?\n\nO produto voltará para o estoque.`
+      );
+      if (!ok) return;
+      setDesfazendo(p.id);
+      try {
+        await updateProduto(p.id, limparVenda);
+        setVendas(prev => prev.filter(v => v.id !== p.id));
+      } catch {
+        alert('Erro ao desfazer venda. Tente novamente.');
+      } finally {
+        setDesfazendo(null);
+      }
     }
   }
 
@@ -191,6 +213,11 @@ export default function VendasPage() {
                 <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold mt-1 ${
                   p.estado === 'NOVO' ? 'bg-purple-100 text-purple-700' : 'bg-yellow-100 text-yellow-700'
                 }`}>{p.estado}</span>
+                {p.fornecedorId && (
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-100 text-orange-700 mt-1">
+                    Fornecedor
+                  </span>
+                )}
               </div>
             </div>
 

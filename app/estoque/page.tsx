@@ -130,18 +130,34 @@ export default function EstoquePage() {
   };
 
   const handleDesfazerVenda = async (p: Produto) => {
-    if (confirm('Desfazer venda e retornar ao estoque?')) {
-      await updateProduto(p.id, {
-        status: 'EM_ESTOQUE',
-        dataVenda: undefined,
-        valorVenda: undefined,
-        custos: undefined,
-        cliente: undefined,
-        contato: undefined,
-        lucro: undefined,
-      });
-      await load();
+    const limparVenda = {
+      status: 'EM_ESTOQUE' as const,
+      dataVenda: undefined,
+      valorVenda: undefined,
+      custos: undefined,
+      cliente: undefined,
+      contato: undefined,
+      lucro: undefined,
+      formasPagamento: undefined,
+      parcelasCredito: undefined,
+      acrescimo: undefined,
+    };
+
+    if (p.fornecedorId) {
+      const escolha = prompt(
+        `Desfazer venda: "${p.modelo} ${p.gb} ${p.cor}"\n\nEste produto veio de um fornecedor.\n\nDigite:\n  1 — Manter no estoque\n  2 — Apagar do estoque\n\nOu cancele para voltar.`
+      );
+      if (!escolha) return;
+      if (escolha.trim() === '2') {
+        await deleteProduto(p.id);
+      } else {
+        await updateProduto(p.id, limparVenda);
+      }
+    } else {
+      if (!confirm('Desfazer venda e retornar ao estoque?')) return;
+      await updateProduto(p.id, limparVenda);
     }
+    await load();
   };
 
   const handleSelecionarVendaRapida = (p: Produto, source: 'estoque' | 'fornecedor') => {
@@ -285,11 +301,18 @@ export default function EstoquePage() {
                 </p>
                 <p className="text-xs text-gray-500 truncate">{p.gb} · {p.cor}</p>
               </div>
-              <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold flex-shrink-0 ${
-                p.status === 'EM_ESTOQUE' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
-              }`}>
-                {p.status === 'EM_ESTOQUE' ? 'Estoque' : 'Vendido'}
-              </span>
+              <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+                  p.status === 'EM_ESTOQUE' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                }`}>
+                  {p.status === 'EM_ESTOQUE' ? 'Estoque' : 'Vendido'}
+                </span>
+                {p.fornecedorId && (
+                  <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-100 text-orange-700">
+                    Fornecedor
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Info */}
@@ -486,13 +509,20 @@ export default function EstoquePage() {
                   )}
                   {isAdmin && (
                     <td className="py-2.5 px-3">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
-                        p.status === 'EM_ESTOQUE'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-green-100 text-green-700'
-                      }`}>
-                        {p.status === 'EM_ESTOQUE' ? 'Estoque' : 'Vendido'}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          p.status === 'EM_ESTOQUE'
+                            ? 'bg-blue-100 text-blue-700'
+                            : 'bg-green-100 text-green-700'
+                        }`}>
+                          {p.status === 'EM_ESTOQUE' ? 'Estoque' : 'Vendido'}
+                        </span>
+                        {p.fornecedorId && (
+                          <span className="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold bg-orange-100 text-orange-700">
+                            Fornecedor
+                          </span>
+                        )}
+                      </div>
                     </td>
                   )}
                   <td className="py-2.5 px-3">
