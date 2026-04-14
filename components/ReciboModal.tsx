@@ -1,6 +1,7 @@
 'use client';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Produto, FormaPagamento } from '@/types';
+import RelatorioVendaModal from './RelatorioVendaModal';
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -21,6 +22,7 @@ interface Props {
 
 export default function ReciboModal({ open, onClose, produto }: Props) {
   const reciboRef = useRef<HTMLDivElement>(null);
+  const [relatorioOpen, setRelatorioOpen] = useState(false);
 
   if (!open || !produto || produto.status !== 'VENDIDO') return null;
 
@@ -342,7 +344,7 @@ export default function ReciboModal({ open, onClose, produto }: Props) {
         </div>
 
         {/* Botões */}
-        <div className="px-6 pb-6 flex gap-3">
+        <div className="px-6 pb-4 flex gap-3">
           <button
             onClick={handleSavePdf}
             className="flex-1 py-2.5 rounded-lg text-sm font-semibold text-white"
@@ -364,7 +366,24 @@ export default function ReciboModal({ open, onClose, produto }: Props) {
             Fechar
           </button>
         </div>
+
+        {/* Botão Relatório de Venda */}
+        <div className="px-6 pb-6">
+          <button
+            onClick={() => setRelatorioOpen(true)}
+            className="w-full py-2.5 rounded-lg text-sm font-semibold text-white flex items-center justify-center gap-2"
+            style={{ background: '#25D366' }}
+          >
+            <span>📋</span> Gerar Relatório de Venda
+          </button>
+        </div>
       </div>
+
+      <RelatorioVendaModal
+        open={relatorioOpen}
+        onClose={() => setRelatorioOpen(false)}
+        produto={produto}
+      />
     </div>
   );
 }
