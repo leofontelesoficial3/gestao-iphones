@@ -177,7 +177,6 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
         acrescimo: totalAcrescimo },
       formas.includes('PRODUTO_RECEBIDO') ? recebido : undefined,
     );
-    onClose();
   };
 
   const usaProdutoRecebido = formas.includes('PRODUTO_RECEBIDO');
