@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { Produto, FormaPagamento } from '@/types';
-import { mascaraCelular } from '@/lib/format';
+import { ProdutoRecebidoData } from './VendaModal';
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -35,9 +35,11 @@ interface Props {
   open: boolean;
   onClose: () => void;
   produto: Produto | null;
+  produtoRecebido?: ProdutoRecebidoData | null;
 }
 
-export default function RelatorioVendaModal({ open, onClose, produto }: Props) {
+export default function RelatorioVendaModal({ open, onClose, produto, produtoRecebido }: Props) {
+  const [tituloEndereco, setTituloEndereco] = useState('');
   const [endereco, setEndereco] = useState<Endereco>(emptyEndereco());
   const [dataEntrega, setDataEntrega] = useState('');
   const [horaEntrega, setHoraEntrega] = useState('');
@@ -99,19 +101,26 @@ export default function RelatorioVendaModal({ open, onClose, produto }: Props) {
       })
       .join(', ');
 
-    const enderecoTxt = endereco.logradouro
-      ? `${endereco.logradouro}${endereco.numero ? `, ${endereco.numero}` : ''}${endereco.complemento ? ` - ${endereco.complemento}` : ''}\n${endereco.bairro} - ${endereco.cidade}/${endereco.uf}\nCEP: ${endereco.cep}`
-      : 'Não informado';
+    const enderecoLinhas: string[] = [];
+    if (tituloEndereco) enderecoLinhas.push(`Local: ${tituloEndereco}`);
+    if (endereco.logradouro) {
+      enderecoLinhas.push(
+        `${endereco.logradouro}${endereco.numero ? `, ${endereco.numero}` : ''}${endereco.complemento ? ` - ${endereco.complemento}` : ''}`,
+      );
+      enderecoLinhas.push(`${endereco.bairro} - ${endereco.cidade}/${endereco.uf}`);
+      enderecoLinhas.push(`CEP: ${endereco.cep}`);
+    }
+    const enderecoTxt = enderecoLinhas.length > 0 ? enderecoLinhas.join('\n') : 'Não informado';
 
     const entregaTxt = dataEntrega
       ? `${new Date(dataEntrega + 'T12:00:00').toLocaleDateString('pt-BR')}${horaEntrega ? ` às ${horaEntrega}` : ''}`
       : 'Não informada';
 
-    return [
+    const linhas = [
       `📋 *RELATÓRIO DE VENDA*`,
       `━━━━━━━━━━━━━━━━━━━━━`,
       ``,
-      `📱 *Produto*`,
+      `📱 *Produto Vendido*`,
       `${produto.modelo} ${produto.linha}`,
       `${produto.gb} · ${produto.cor} · ${produto.estado}`,
       `Código: #${produto.codigo}`,
@@ -130,10 +139,22 @@ export default function RelatorioVendaModal({ open, onClose, produto }: Props) {
       `Valor: ${produto.valorVenda ? fmt(produto.valorVenda) : '—'}`,
       `Forma: ${formas || '—'}`,
       `Data da Venda: ${dataVenda}`,
-      ``,
-      `━━━━━━━━━━━━━━━━━━━━━`,
-      `🏪 *iPhones Fortaleza*`,
-    ].join('\n');
+    ];
+
+    if (produtoRecebido) {
+      linhas.push(
+        ``,
+        `📦 *Produto Recebido como Pagamento*`,
+        `${produtoRecebido.modelo} ${produtoRecebido.linha}`,
+        `${produtoRecebido.gb} · ${produtoRecebido.cor} · ${produtoRecebido.estado}`,
+        `Valor estimado: ${fmt(produtoRecebido.valorCompra)}`,
+      );
+      if (produtoRecebido.imei) linhas.push(`IMEI: ${produtoRecebido.imei}`);
+    }
+
+    linhas.push(``, `━━━━━━━━━━━━━━━━━━━━━`, `🏪 *iPhones Fortaleza*`);
+
+    return linhas.join('\n');
   };
 
   const enviarWhatsApp = () => {
@@ -143,6 +164,7 @@ export default function RelatorioVendaModal({ open, onClose, produto }: Props) {
   };
 
   const handleClose = () => {
+    setTituloEndereco('');
     setEndereco(emptyEndereco());
     setDataEntrega('');
     setHoraEntrega('');
@@ -207,6 +229,16 @@ export default function RelatorioVendaModal({ open, onClose, produto }: Props) {
           <div>
             <p className="font-semibold text-gray-700 mb-2 text-sm">Endereço de Entrega</p>
             <div className="flex flex-col gap-3">
+              <div>
+                <label className="label">Local / Título</label>
+                <input
+                  type="text"
+                  className="input"
+                  value={tituloEndereco}
+                  onChange={e => setTituloEndereco(e.target.value)}
+                  placeholder="Ex: Shopping, Mercado, Residência..."
+                />
+              </div>
               <div>
                 <label className="label">CEP</label>
                 <div className="flex gap-2">
@@ -307,6 +339,21 @@ export default function RelatorioVendaModal({ open, onClose, produto }: Props) {
               }).join(', ') || '—'}
             </p>
           </div>
+
+          {/* Produto Recebido como Pagamento */}
+          {produtoRecebido && (
+            <div className="bg-blue-50 rounded-xl p-4 border border-blue-200 text-sm space-y-1">
+              <p className="font-semibold text-blue-700 mb-2 flex items-center gap-2">
+                <span>📦</span> Produto Recebido como Pagamento
+              </p>
+              <p className="text-gray-700 font-medium">{produtoRecebido.modelo} {produtoRecebido.linha}</p>
+              <p className="text-gray-600">{produtoRecebido.gb} · {produtoRecebido.cor} · {produtoRecebido.estado}</p>
+              <p className="text-gray-600">Valor estimado: <span className="font-semibold">{fmt(produtoRecebido.valorCompra)}</span></p>
+              {produtoRecebido.imei && (
+                <p className="text-gray-400 text-xs font-mono">IMEI: {produtoRecebido.imei}</p>
+              )}
+            </div>
+          )}
 
           {/* Botões */}
           <div className="flex gap-3 justify-end">

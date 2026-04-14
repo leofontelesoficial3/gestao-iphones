@@ -51,6 +51,7 @@ export default function EstoquePage() {
   const [toastMsg, setToastMsg] = useState('');
   const [reciboAberto, setReciboAberto] = useState(false);
   const [produtoRecibo, setProdutoRecibo] = useState<Produto | null>(null);
+  const [recebidoRecibo, setRecebidoRecibo] = useState<ProdutoRecebidoData | null>(null);
   const [ocultarValores, setOcultarValores] = useState(false);
   const [vendaRapidaOpen, setVendaRapidaOpen] = useState(false);
   /** Id do produto criado via fluxo Fornecedor (para desfazer se cancelar). */
@@ -103,6 +104,7 @@ export default function EstoquePage() {
       }
       const vendido: Produto = { ...vendendo, ...updates } as Produto;
       setProdutoRecibo(vendido);
+      setRecebidoRecibo(produtoRecebido ?? null);
       setReciboAberto(true);
       setToastMsg(`${vendendo.modelo} ${vendendo.linha} vendido por ${valor}!`);
       setToastVenda(true);
@@ -589,8 +591,9 @@ export default function EstoquePage() {
       />
       <ReciboModal
         open={reciboAberto}
-        onClose={() => { setReciboAberto(false); setProdutoRecibo(null); }}
+        onClose={() => { setReciboAberto(false); setProdutoRecibo(null); setRecebidoRecibo(null); }}
         produto={produtoRecibo}
+        produtoRecebido={recebidoRecibo}
       />
       <Toast
         open={toastVenda}

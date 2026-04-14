@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react';
 import { Produto, FormaPagamento } from '@/types';
 import RelatorioVendaModal from './RelatorioVendaModal';
+import { ProdutoRecebidoData } from './VendaModal';
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -18,9 +19,10 @@ interface Props {
   open: boolean;
   onClose: () => void;
   produto: Produto | null;
+  produtoRecebido?: ProdutoRecebidoData | null;
 }
 
-export default function ReciboModal({ open, onClose, produto }: Props) {
+export default function ReciboModal({ open, onClose, produto, produtoRecebido }: Props) {
   const reciboRef = useRef<HTMLDivElement>(null);
   const [relatorioOpen, setRelatorioOpen] = useState(false);
 
@@ -383,6 +385,7 @@ export default function ReciboModal({ open, onClose, produto }: Props) {
         open={relatorioOpen}
         onClose={() => setRelatorioOpen(false)}
         produto={produto}
+        produtoRecebido={produtoRecebido}
       />
     </div>
   );

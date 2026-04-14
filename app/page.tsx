@@ -6,6 +6,7 @@ import StatsCard from '@/components/StatsCard';
 import VendaRapidaModal from '@/components/VendaRapidaModal';
 import VendaModal, { ProdutoRecebidoData } from '@/components/VendaModal';
 import ReciboModal from '@/components/ReciboModal';
+
 import Toast from '@/components/Toast';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
@@ -33,6 +34,7 @@ export default function Dashboard() {
   const [produtoTempId, setProdutoTempId] = useState<string | null>(null);
   const [reciboAberto, setReciboAberto] = useState(false);
   const [produtoRecibo, setProdutoRecibo] = useState<Produto | null>(null);
+  const [recebidoRecibo, setRecebidoRecibo] = useState<ProdutoRecebidoData | null>(null);
   const [toastVenda, setToastVenda] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
 
@@ -78,6 +80,7 @@ export default function Dashboard() {
     }
     const vendido: Produto = { ...vendendo, ...updates } as Produto;
     setProdutoRecibo(vendido);
+    setRecebidoRecibo(produtoRecebido ?? null);
     setReciboAberto(true);
     setToastMsg(`${vendendo.modelo} ${vendendo.linha} vendido por ${valorStr}!`);
     setToastVenda(true);
@@ -331,8 +334,9 @@ export default function Dashboard() {
       />
       <ReciboModal
         open={reciboAberto}
-        onClose={() => { setReciboAberto(false); setProdutoRecibo(null); }}
+        onClose={() => { setReciboAberto(false); setProdutoRecibo(null); setRecebidoRecibo(null); }}
         produto={produtoRecibo}
+        produtoRecebido={recebidoRecibo}
       />
       <Toast
         open={toastVenda}
