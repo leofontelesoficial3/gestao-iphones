@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Produto, FormaPagamento } from '@/types';
 import { ProdutoRecebidoData } from './VendaModal';
 
@@ -45,6 +45,21 @@ export default function RelatorioVendaModal({ open, onClose, produto, produtoRec
   const [horaEntrega, setHoraEntrega] = useState('');
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [erroCep, setErroCep] = useState('');
+
+  // Pré-preenche com o endereço salvo na venda
+  useEffect(() => {
+    if (open && produto) {
+      setEndereco({
+        cep: produto.enderecoCep ?? '',
+        logradouro: produto.enderecoLogradouro ?? '',
+        bairro: produto.enderecoBairro ?? '',
+        cidade: produto.enderecoCidade ?? '',
+        uf: produto.enderecoUf ?? '',
+        numero: produto.enderecoNumero ?? '',
+        complemento: produto.enderecoComplemento ?? '',
+      });
+    }
+  }, [open, produto]);
 
   if (!open || !produto) return null;
 
@@ -124,6 +139,7 @@ export default function RelatorioVendaModal({ open, onClose, produto, produtoRec
       `${produto.modelo} ${produto.linha}`,
       `${produto.gb} · ${produto.cor} · ${produto.estado}`,
       `Código: #${produto.codigo}`,
+      ...(produto.descricao ? [`Descrição: ${produto.descricao}`] : []),
       ``,
       `👤 *Cliente*`,
       `Nome: ${produto.cliente || 'Não informado'}`,
@@ -150,6 +166,7 @@ export default function RelatorioVendaModal({ open, onClose, produto, produtoRec
         `Valor estimado: ${fmt(produtoRecebido.valorCompra)}`,
       );
       if (produtoRecebido.imei) linhas.push(`IMEI: ${produtoRecebido.imei}`);
+      if (produtoRecebido.descricao) linhas.push(`Descrição: ${produtoRecebido.descricao}`);
     }
 
     linhas.push(``, `━━━━━━━━━━━━━━━━━━━━━`, `🏪 *iPhones Fortaleza*`);

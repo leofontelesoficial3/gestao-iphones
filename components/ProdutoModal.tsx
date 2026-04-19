@@ -217,6 +217,17 @@ export default function ProdutoModal({ open, onClose, onSave, editProduto, nextC
               </select>
             </div>
 
+            <div className="col-span-2">
+              <label className="label">Descrição <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
+              <textarea
+                className="input"
+                rows={3}
+                value={form.descricao ?? ''}
+                onChange={e => set('descricao', e.target.value)}
+                placeholder="Observações sobre o aparelho (ex: acompanha carregador, caixa, fone...)"
+              />
+            </div>
+
             {/* Seção de Fotos */}
             <div className="col-span-2">
               <div className="flex items-center justify-between mb-2">

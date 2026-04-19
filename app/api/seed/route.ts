@@ -74,6 +74,16 @@ export async function GET() {
 
   // Adiciona coluna fornecedor_id em produtos (migration idempotente)
   await sql`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS fornecedor_id INTEGER`;
+  // Descrição do aparelho
+  await sql`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS descricao TEXT`;
+  // Endereço do cliente
+  await sql`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS endereco_cep VARCHAR(20)`;
+  await sql`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS endereco_logradouro VARCHAR(300)`;
+  await sql`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS endereco_numero VARCHAR(30)`;
+  await sql`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS endereco_bairro VARCHAR(150)`;
+  await sql`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS endereco_cidade VARCHAR(150)`;
+  await sql`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS endereco_uf VARCHAR(5)`;
+  await sql`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS endereco_complemento VARCHAR(200)`;
 
   // Seed users padrão
   const existingUsers = await sql`SELECT COUNT(*) as total FROM users`;

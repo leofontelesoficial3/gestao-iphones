@@ -19,6 +19,7 @@ export interface Produto {
   status: ProdutoStatus;
   fotos?: string[]; // base64
   fornecedorId?: number;
+  descricao?: string;
   // Campos preenchidos quando VENDIDO
   dataVenda?: string;
   valorVenda?: number;
@@ -29,6 +30,14 @@ export interface Produto {
   formasPagamento?: FormaPagamento[];
   parcelasCredito?: number; // 1-18
   acrescimo?: number; // valor total do acréscimo em R$
+  // Endereço do cliente
+  enderecoCep?: string;
+  enderecoLogradouro?: string;
+  enderecoNumero?: string;
+  enderecoBairro?: string;
+  enderecoCidade?: string;
+  enderecoUf?: string;
+  enderecoComplemento?: string;
 }
 
 export interface Fornecedor {

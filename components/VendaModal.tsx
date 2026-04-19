@@ -36,13 +36,14 @@ export interface ProdutoRecebidoData {
   dataEntrada: string; modelo: string; linha: string; imei: string;
   possuiNota: 'SIM' | 'NÃO'; gb: string; compTrocado: string;
   cor: string; estado: 'NOVO' | 'SEMINOVO'; bateria: string; valorCompra: number;
+  descricao?: string;
 }
 
 const emptyRecebido = (): ProdutoRecebidoData => ({
   dataEntrada: new Date().toISOString().split('T')[0],
   modelo: 'IPHONE 16', linha: 'NORMAL', imei: '', possuiNota: 'NÃO',
   gb: '128 GB', compTrocado: 'NÃO', cor: 'PRETO', estado: 'SEMINOVO',
-  bateria: '100', valorCompra: 0,
+  bateria: '100', valorCompra: 0, descricao: '',
 });
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -71,6 +72,17 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
   const [recebido, setRecebido] = useState<ProdutoRecebidoData>(emptyRecebido());
   const [recebidoValorTxt, setRecebidoValorTxt] = useState('');
 
+  // Endereço do cliente
+  const [enderecoCep, setEnderecoCep] = useState('');
+  const [enderecoLogradouro, setEnderecoLogradouro] = useState('');
+  const [enderecoNumero, setEnderecoNumero] = useState('');
+  const [enderecoBairro, setEnderecoBairro] = useState('');
+  const [enderecoCidade, setEnderecoCidade] = useState('');
+  const [enderecoUf, setEnderecoUf] = useState('');
+  const [enderecoComplemento, setEnderecoComplemento] = useState('');
+  const [buscandoCep, setBuscandoCep] = useState(false);
+  const [erroCep, setErroCep] = useState('');
+
   useEffect(() => {
     if (!open || !produto) return;
     setDataVenda(produto.dataVenda || new Date().toISOString().split('T')[0]);
@@ -88,7 +100,44 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
     setValoresTxt({});
     setRecebido(emptyRecebido());
     setRecebidoValorTxt('');
+    setEnderecoCep(produto.enderecoCep ?? '');
+    setEnderecoLogradouro(produto.enderecoLogradouro ?? '');
+    setEnderecoNumero(produto.enderecoNumero ?? '');
+    setEnderecoBairro(produto.enderecoBairro ?? '');
+    setEnderecoCidade(produto.enderecoCidade ?? '');
+    setEnderecoUf(produto.enderecoUf ?? '');
+    setEnderecoComplemento(produto.enderecoComplemento ?? '');
+    setErroCep('');
   }, [produto, open]);
+
+  const mascaraCep = (v: string) => {
+    const nums = v.replace(/\D/g, '').slice(0, 8);
+    if (nums.length > 5) return `${nums.slice(0, 5)}-${nums.slice(5)}`;
+    return nums;
+  };
+
+  const buscarCep = async (cepRaw: string) => {
+    const cep = cepRaw.replace(/\D/g, '');
+    if (cep.length !== 8) return;
+    setBuscandoCep(true);
+    setErroCep('');
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const data = await res.json();
+      if (data.erro) {
+        setErroCep('CEP não encontrado');
+      } else {
+        setEnderecoLogradouro(data.logradouro || '');
+        setEnderecoBairro(data.bairro || '');
+        setEnderecoCidade(data.localidade || '');
+        setEnderecoUf(data.uf || '');
+      }
+    } catch {
+      setErroCep('Erro ao buscar CEP');
+    } finally {
+      setBuscandoCep(false);
+    }
+  };
 
   // Sincroniza o valor do Produto Recebido com o valorCompra estimado
   useEffect(() => {
@@ -172,9 +221,18 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
       return;
     }
     onSave(
-      { status: 'VENDIDO', dataVenda, valorVenda, custos, cliente, contato, lucro,
+      {
+        status: 'VENDIDO', dataVenda, valorVenda, custos, cliente, contato, lucro,
         formasPagamento: formas, parcelasCredito: formas.includes('CREDITO') ? parcelas : undefined,
-        acrescimo: totalAcrescimo },
+        acrescimo: totalAcrescimo,
+        enderecoCep: enderecoCep || undefined,
+        enderecoLogradouro: enderecoLogradouro || undefined,
+        enderecoNumero: enderecoNumero || undefined,
+        enderecoBairro: enderecoBairro || undefined,
+        enderecoCidade: enderecoCidade || undefined,
+        enderecoUf: enderecoUf || undefined,
+        enderecoComplemento: enderecoComplemento || undefined,
+      },
       formas.includes('PRODUTO_RECEBIDO') ? recebido : undefined,
     );
   };
@@ -451,6 +509,16 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
                     <option>NÃO</option><option>SIM</option>
                   </select>
                 </div>
+                <div className="col-span-2">
+                  <label className="label">Descrição <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
+                  <textarea
+                    className="input"
+                    rows={2}
+                    value={recebido.descricao ?? ''}
+                    onChange={e => setR('descricao', e.target.value)}
+                    placeholder="Observações sobre o aparelho recebido (acessórios, estado, etc.)"
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -473,6 +541,67 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
                 placeholder="(00) 0 0000-0000"
                 maxLength={16}
               />
+            </div>
+          </div>
+
+          {/* Endereço do Cliente */}
+          <div className="border-2 border-gray-200 rounded-2xl p-4 bg-gray-50 flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">📍</span>
+              <h3 className="font-semibold text-gray-700 text-sm">Endereço do Cliente <span className="text-gray-400 text-xs font-normal">(opcional)</span></h3>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="label">CEP</label>
+                <div className="flex gap-1">
+                  <input
+                    type="text"
+                    className="input"
+                    value={enderecoCep}
+                    onChange={e => {
+                      const v = mascaraCep(e.target.value);
+                      setEnderecoCep(v);
+                      if (v.replace(/\D/g, '').length === 8) buscarCep(v);
+                    }}
+                    placeholder="00000-000"
+                    maxLength={9}
+                  />
+                </div>
+                {buscandoCep && <p className="text-xs text-blue-500 mt-1">Buscando...</p>}
+                {erroCep && <p className="text-xs text-red-500 mt-1">{erroCep}</p>}
+              </div>
+              <div className="col-span-2">
+                <label className="label">Rua / Logradouro</label>
+                <input type="text" className="input" value={enderecoLogradouro}
+                  onChange={e => setEnderecoLogradouro(e.target.value)}
+                  placeholder="Preenchido pelo CEP" />
+              </div>
+              <div>
+                <label className="label">Número</label>
+                <input type="text" className="input" value={enderecoNumero}
+                  onChange={e => setEnderecoNumero(e.target.value)} placeholder="Nº" />
+              </div>
+              <div className="col-span-2">
+                <label className="label">Complemento</label>
+                <input type="text" className="input" value={enderecoComplemento}
+                  onChange={e => setEnderecoComplemento(e.target.value)}
+                  placeholder="Apto, bloco..." />
+              </div>
+              <div>
+                <label className="label">Bairro</label>
+                <input type="text" className="input" value={enderecoBairro}
+                  onChange={e => setEnderecoBairro(e.target.value)} placeholder="Bairro" />
+              </div>
+              <div className="col-span-2">
+                <label className="label">Cidade / UF</label>
+                <div className="flex gap-2">
+                  <input type="text" className="input flex-1" value={enderecoCidade}
+                    onChange={e => setEnderecoCidade(e.target.value)} placeholder="Cidade" />
+                  <input type="text" className="input !w-16" value={enderecoUf}
+                    onChange={e => setEnderecoUf(e.target.value.toUpperCase().slice(0, 2))}
+                    placeholder="UF" maxLength={2} />
+                </div>
+              </div>
             </div>
           </div>
 

@@ -44,6 +44,7 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
   const [fValorCompra, setFValorCompra] = useState(0);
   const [fValorCompraTxt, setFValorCompraTxt] = useState('');
   const [fFornecedorId, setFFornecedorId] = useState<number | ''>('');
+  const [fDescricao, setFDescricao] = useState('');
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
@@ -119,11 +120,12 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
         status: 'EM_ESTOQUE',
         fotos: [],
         fornecedorId: fFornecedorId ? Number(fFornecedorId) : undefined,
+        descricao: fDescricao || undefined,
       });
       await onFornecedorCriado();
       onSelect(novo, 'fornecedor');
       // Reset
-      setFImei(''); setFValorCompra(0); setFValorCompraTxt(''); setFFornecedorId('');
+      setFImei(''); setFValorCompra(0); setFValorCompraTxt(''); setFFornecedorId(''); setFDescricao('');
     } catch {
       setErro('Erro ao cadastrar produto do fornecedor.');
     } finally {
@@ -350,6 +352,16 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
                       Cadastre fornecedores em Fornecedores no menu
                     </p>
                   )}
+                </div>
+                <div className="col-span-2">
+                  <label className="label">Descrição <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
+                  <textarea
+                    className="input"
+                    rows={2}
+                    value={fDescricao}
+                    onChange={e => setFDescricao(e.target.value)}
+                    placeholder="Observações sobre o aparelho (acessórios, marcas, etc.)"
+                  />
                 </div>
               </div>
 

@@ -28,6 +28,14 @@ function rowToProduto(r: any) {
     parcelasCredito: r.parcelas_credito ? Number(r.parcelas_credito) : undefined,
     acrescimo: r.acrescimo ? Number(r.acrescimo) : undefined,
     fornecedorId: r.fornecedor_id ? Number(r.fornecedor_id) : undefined,
+    descricao: r.descricao || undefined,
+    enderecoCep: r.endereco_cep || undefined,
+    enderecoLogradouro: r.endereco_logradouro || undefined,
+    enderecoNumero: r.endereco_numero || undefined,
+    enderecoBairro: r.endereco_bairro || undefined,
+    enderecoCidade: r.endereco_cidade || undefined,
+    enderecoUf: r.endereco_uf || undefined,
+    enderecoComplemento: r.endereco_complemento || undefined,
   };
 }
 
@@ -45,8 +53,8 @@ export async function POST(req: NextRequest) {
   const id = crypto.randomUUID();
 
   await sql`
-    INSERT INTO produtos (id, conta, data_entrada, codigo, modelo, linha, imei, possui_nota, gb, comp_trocado, cor, estado, bateria, valor_compra, status, fotos, fornecedor_id)
-    VALUES (${id}, ${body.conta || 'default'}, ${body.dataEntrada}, ${body.codigo}, ${body.modelo}, ${body.linha}, ${body.imei}, ${body.possuiNota}, ${body.gb}, ${body.compTrocado}, ${body.cor}, ${body.estado}, ${body.bateria}, ${body.valorCompra}, 'EM_ESTOQUE', ${body.fotos ? JSON.stringify(body.fotos) : null}, ${body.fornecedorId ?? null})
+    INSERT INTO produtos (id, conta, data_entrada, codigo, modelo, linha, imei, possui_nota, gb, comp_trocado, cor, estado, bateria, valor_compra, status, fotos, fornecedor_id, descricao)
+    VALUES (${id}, ${body.conta || 'default'}, ${body.dataEntrada}, ${body.codigo}, ${body.modelo}, ${body.linha}, ${body.imei}, ${body.possuiNota}, ${body.gb}, ${body.compTrocado}, ${body.cor}, ${body.estado}, ${body.bateria}, ${body.valorCompra}, 'EM_ESTOQUE', ${body.fotos ? JSON.stringify(body.fotos) : null}, ${body.fornecedorId ?? null}, ${body.descricao ?? null})
   `;
 
   const rows = await sql`SELECT * FROM produtos WHERE id = ${id}`;
@@ -84,6 +92,14 @@ export async function PUT(req: NextRequest) {
       parcelas_credito = ${updates.parcelasCredito ?? null},
       acrescimo = ${updates.acrescimo ?? null},
       fornecedor_id = COALESCE(${updates.fornecedorId ?? null}, fornecedor_id),
+      descricao = COALESCE(${updates.descricao ?? null}, descricao),
+      endereco_cep = ${updates.enderecoCep ?? null},
+      endereco_logradouro = ${updates.enderecoLogradouro ?? null},
+      endereco_numero = ${updates.enderecoNumero ?? null},
+      endereco_bairro = ${updates.enderecoBairro ?? null},
+      endereco_cidade = ${updates.enderecoCidade ?? null},
+      endereco_uf = ${updates.enderecoUf ?? null},
+      endereco_complemento = ${updates.enderecoComplemento ?? null},
       updated_at = NOW()
     WHERE id = ${id}
   `;

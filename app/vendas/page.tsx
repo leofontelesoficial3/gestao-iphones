@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Produto } from '@/types';
 import { corSuave } from '@/lib/cores';
 import { loadProdutos, updateProduto, deleteProduto } from '@/lib/storage';
+import VendaModal from '@/components/VendaModal';
 
 const fmt = (v: number) =>
   v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -20,6 +21,16 @@ export default function VendasPage() {
   const [dataFim, setDataFim] = useState('');
   const [ordem, setOrdem] = useState<'recente' | 'antiga'>('recente');
   const [desfazendo, setDesfazendo] = useState<string | null>(null);
+  const [editando, setEditando] = useState<Produto | null>(null);
+
+  async function handleSalvarEdicao(updates: Partial<Produto>) {
+    if (!editando) return;
+    // Ao editar, nunca criamos produto recebido novo (já foi criado na venda original)
+    await updateProduto(editando.id, updates);
+    const atualizado: Produto = { ...editando, ...updates } as Produto;
+    setVendas(prev => prev.map(v => v.id === editando.id ? atualizado : v));
+    setEditando(null);
+  }
 
   async function handleDesfazerVenda(p: Produto) {
     const limparVenda = {
@@ -251,13 +262,21 @@ export default function VendasPage() {
               </div>
             </div>
 
-            <button
-              onClick={() => handleDesfazerVenda(p)}
-              disabled={desfazendo === p.id}
-              className="w-full text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg py-1.5 transition-colors disabled:opacity-50"
-            >
-              {desfazendo === p.id ? 'Desfazendo...' : '↩ Desfazer Venda'}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEditando(p)}
+                className="flex-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg py-1.5 transition-colors"
+              >
+                ✏️ Editar
+              </button>
+              <button
+                onClick={() => handleDesfazerVenda(p)}
+                disabled={desfazendo === p.id}
+                className="flex-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg py-1.5 transition-colors disabled:opacity-50"
+              >
+                {desfazendo === p.id ? 'Desfazendo...' : '↩ Desfazer'}
+              </button>
+            </div>
           </div>
         ))}
 
@@ -351,13 +370,21 @@ export default function VendasPage() {
                     {p.lucro !== undefined ? fmt(p.lucro) : '—'}
                   </td>
                   <td className="py-2.5 px-3 text-center">
-                    <button
-                      onClick={() => handleDesfazerVenda(p)}
-                      disabled={desfazendo === p.id}
-                      className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded px-2 py-1 transition-colors disabled:opacity-50"
-                    >
-                      {desfazendo === p.id ? '...' : '↩ Desfazer'}
-                    </button>
+                    <div className="flex gap-1 justify-center">
+                      <button
+                        onClick={() => setEditando(p)}
+                        className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded px-2 py-1 transition-colors"
+                      >
+                        ✏️ Editar
+                      </button>
+                      <button
+                        onClick={() => handleDesfazerVenda(p)}
+                        disabled={desfazendo === p.id}
+                        className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded px-2 py-1 transition-colors disabled:opacity-50"
+                      >
+                        {desfazendo === p.id ? '...' : '↩ Desfazer'}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -385,6 +412,13 @@ export default function VendasPage() {
           </table>
         </div>
       </div>
+
+      <VendaModal
+        open={!!editando}
+        onClose={() => setEditando(null)}
+        onSave={handleSalvarEdicao}
+        produto={editando}
+      />
     </div>
   );
 }
