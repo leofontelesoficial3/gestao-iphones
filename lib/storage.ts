@@ -67,17 +67,25 @@ export async function addProduto(produto: Omit<Produto, 'id'>): Promise<Produto>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...produto, conta: getConta() }),
   });
+  if (!res.ok) {
+    const err = await res.text().catch(() => '');
+    throw new Error(`Erro ao criar produto (${res.status}): ${err.slice(0, 200)}`);
+  }
   const novo = await res.json();
   _cache = [..._cache, novo];
   return novo;
 }
 
 export async function updateProduto(id: string, updates: Partial<Produto>): Promise<void> {
-  await fetch('/api/produtos', {
+  const res = await fetch('/api/produtos', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ id, ...updates }),
   });
+  if (!res.ok) {
+    const err = await res.text().catch(() => '');
+    throw new Error(`Erro ao atualizar produto (${res.status}): ${err.slice(0, 200)}`);
+  }
   _cache = _cache.map(p => p.id === id ? { ...p, ...updates } : p);
 }
 

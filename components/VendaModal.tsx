@@ -51,7 +51,7 @@ const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', curren
 interface Props {
   open: boolean;
   onClose: () => void;
-  onSave: (updates: Partial<Produto>, produtoRecebido?: ProdutoRecebidoData) => void;
+  onSave: (updates: Partial<Produto>, produtoRecebido?: ProdutoRecebidoData) => void | Promise<void>;
   produto: Produto | null;
 }
 
@@ -213,28 +213,36 @@ export default function VendaModal({ open, onClose, onSave, produto }: Props) {
   const setR = (field: keyof ProdutoRecebidoData, v: string | number) =>
     setRecebido(prev => ({ ...prev, [field]: v }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formas.length === 0) { alert('Selecione ao menos uma forma de pagamento.'); return; }
     if (Math.abs(saldo) > 0.05) {
       alert(`O total das formas de pagamento (${fmt(totalComRecebido)}) deve ser igual ao valor de venda (${fmt(valorVenda)}).`);
       return;
     }
-    onSave(
-      {
-        status: 'VENDIDO', dataVenda, valorVenda, custos, cliente, contato, lucro,
-        formasPagamento: formas, parcelasCredito: formas.includes('CREDITO') ? parcelas : undefined,
-        acrescimo: totalAcrescimo,
-        enderecoCep: enderecoCep || undefined,
-        enderecoLogradouro: enderecoLogradouro || undefined,
-        enderecoNumero: enderecoNumero || undefined,
-        enderecoBairro: enderecoBairro || undefined,
-        enderecoCidade: enderecoCidade || undefined,
-        enderecoUf: enderecoUf || undefined,
-        enderecoComplemento: enderecoComplemento || undefined,
-      },
-      formas.includes('PRODUTO_RECEBIDO') ? recebido : undefined,
-    );
+    try {
+      await onSave(
+        {
+          status: 'VENDIDO', dataVenda, valorVenda, custos, cliente, contato, lucro,
+          formasPagamento: formas, parcelasCredito: formas.includes('CREDITO') ? parcelas : undefined,
+          acrescimo: totalAcrescimo,
+          enderecoCep: enderecoCep || undefined,
+          enderecoLogradouro: enderecoLogradouro || undefined,
+          enderecoNumero: enderecoNumero || undefined,
+          enderecoBairro: enderecoBairro || undefined,
+          enderecoCidade: enderecoCidade || undefined,
+          enderecoUf: enderecoUf || undefined,
+          enderecoComplemento: enderecoComplemento || undefined,
+        },
+        formas.includes('PRODUTO_RECEBIDO') ? recebido : undefined,
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      alert(
+        `Falha ao registrar a venda.\n\n${msg}\n\n` +
+        `Se o erro mencionar coluna inexistente, abra /api/seed no navegador uma vez para aplicar as migrations do banco.`,
+      );
+    }
   };
 
   const usaProdutoRecebido = formas.includes('PRODUTO_RECEBIDO');
