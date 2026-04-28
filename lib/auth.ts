@@ -1,6 +1,6 @@
 const AUTH_KEY = 'gestao_iphones_auth';
 
-export type Perfil = 'admin' | 'vendedor';
+export type Perfil = 'admin' | 'vendedor' | 'superadmin';
 export type Plano = 'gratuito' | 'profissional' | 'empresarial';
 
 export interface User {

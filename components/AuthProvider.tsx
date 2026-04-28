@@ -6,6 +6,7 @@ interface AuthCtx {
   user: User | null;
   loading: boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
   perfil: Perfil | null;
   conta: string;
   login: (usuario: string, senha: string) => Promise<boolean>;
@@ -13,7 +14,7 @@ interface AuthCtx {
 }
 
 const AuthContext = createContext<AuthCtx>({
-  user: null, loading: true, isAdmin: false, perfil: null, conta: 'default',
+  user: null, loading: true, isAdmin: false, isSuperAdmin: false, perfil: null, conta: 'default',
   login: async () => false, logout: () => {},
 });
 
@@ -36,15 +37,20 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     doLogout();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('gestao_iphones_conta_override');
+    }
     setUser(null);
   };
 
-  const isAdmin = user?.perfil === 'admin';
+  const isSuperAdmin = user?.perfil === 'superadmin';
+  // Superadmin tem todos os privilégios de admin também
+  const isAdmin = user?.perfil === 'admin' || isSuperAdmin;
   const perfil = user?.perfil ?? null;
   const conta = user?.conta ?? 'default';
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, perfil, conta, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, isAdmin, isSuperAdmin, perfil, conta, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -18,9 +18,41 @@ export async function updateTema(cor: TemaCor, logo: string | null): Promise<Tem
   return res.json();
 }
 
+const CONTA_OVERRIDE_KEY = 'gestao_iphones_conta_override';
+
 function getConta(): string {
   const user = getLoggedUser();
+  // Superadmin escolhe qual conta visualizar via override em localStorage
+  if (user?.perfil === 'superadmin' && typeof window !== 'undefined') {
+    const override = localStorage.getItem(CONTA_OVERRIDE_KEY);
+    if (override) return override;
+  }
   return user?.conta || 'default';
+}
+
+export function setContaOverride(conta: string | null): void {
+  if (typeof window === 'undefined') return;
+  if (conta) localStorage.setItem(CONTA_OVERRIDE_KEY, conta);
+  else localStorage.removeItem(CONTA_OVERRIDE_KEY);
+}
+
+export function getContaOverride(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(CONTA_OVERRIDE_KEY);
+}
+
+export interface ContaInfo {
+  conta: string;
+  nomeLoja: string;
+  plano: string;
+  totalUsuarios: number;
+  totalProdutos: number;
+}
+
+export async function getContas(): Promise<ContaInfo[]> {
+  const res = await fetch('/api/contas');
+  if (!res.ok) return [];
+  return res.json();
 }
 
 // ── Fornecedores ──────────────────────────────────────────────

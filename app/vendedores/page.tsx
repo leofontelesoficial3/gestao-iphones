@@ -19,8 +19,9 @@ const PLANO_COR: Record<Plano, string> = {
 
 // Estilo dos badges por cargo
 const PERFIL_STYLE: Record<Perfil, { bg: string; fg: string; label: string; avatar: string }> = {
-  admin:    { bg: '#eef5fb', fg: '#2E78B7', label: 'Administrador', avatar: '#2E78B7' },
-  vendedor: { bg: '#eef7ec', fg: '#3d7a35', label: 'Vendedor',      avatar: '#5AAA4A' },
+  admin:      { bg: '#eef5fb', fg: '#2E78B7', label: 'Administrador', avatar: '#2E78B7' },
+  vendedor:   { bg: '#eef7ec', fg: '#3d7a35', label: 'Vendedor',      avatar: '#5AAA4A' },
+  superadmin: { bg: '#f3e8ff', fg: '#6b21a8', label: 'Super Admin',   avatar: '#9333ea' },
 };
 
 interface Membro {

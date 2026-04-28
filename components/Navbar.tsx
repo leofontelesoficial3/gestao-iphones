@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from './AuthProvider';
 import { useTheme } from './ThemeProvider';
+import ContaSwitcher from './ContaSwitcher';
 
 const allLinks = [
   { href: '/', label: 'Dashboard', icon: '📊', adminOnly: true },
@@ -18,7 +19,7 @@ const allLinks = [
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isSuperAdmin } = useAuth();
   const { paleta, tema } = useTheme();
 
   const links = allLinks.filter(l => !l.adminOnly || isAdmin);
@@ -63,10 +64,13 @@ export default function Navbar() {
           ))}
         </div>
         <div className="flex items-center gap-3">
+          {isSuperAdmin && <ContaSwitcher />}
           <div className="text-right">
             <span className="text-sm text-gray-400 block">{user?.nome}</span>
-            <span className={`text-[10px] font-semibold ${isAdmin ? 'text-blue-400' : 'text-green-400'}`}>
-              {isAdmin ? 'Administrador' : 'Vendedor'}
+            <span className={`text-[10px] font-semibold ${
+              isSuperAdmin ? 'text-purple-400' : isAdmin ? 'text-blue-400' : 'text-green-400'
+            }`}>
+              {isSuperAdmin ? 'Super Admin' : isAdmin ? 'Administrador' : 'Vendedor'}
             </span>
           </div>
           <button
@@ -92,12 +96,15 @@ export default function Navbar() {
             </p>
           </div>
         </div>
-        <button
-          onClick={handleLogout}
-          className="text-sm text-gray-400 hover:text-white px-2 py-1 rounded"
-        >
-          Sair
-        </button>
+        <div className="flex items-center gap-2">
+          {isSuperAdmin && <ContaSwitcher />}
+          <button
+            onClick={handleLogout}
+            className="text-sm text-gray-400 hover:text-white px-2 py-1 rounded"
+          >
+            Sair
+          </button>
+        </div>
       </header>
 
       {/* Mobile: barra inferior fixa com scroll horizontal */}
