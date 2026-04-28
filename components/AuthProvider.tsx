@@ -31,7 +31,16 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (usuario: string, senha: string): Promise<boolean> => {
     const u = await doLogin(usuario, senha);
-    if (u) { setUser(u); return true; }
+    if (u) {
+      // Ao logar como superadmin sem override, define 'default' como conta inicial
+      if (u.perfil === 'superadmin' && typeof window !== 'undefined') {
+        if (!localStorage.getItem('gestao_iphones_conta_override')) {
+          localStorage.setItem('gestao_iphones_conta_override', 'default');
+        }
+      }
+      setUser(u);
+      return true;
+    }
     return false;
   };
 
@@ -47,7 +56,16 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   // Superadmin tem todos os privilégios de admin também
   const isAdmin = user?.perfil === 'admin' || isSuperAdmin;
   const perfil = user?.perfil ?? null;
-  const conta = user?.conta ?? 'default';
+  // Para o superadmin, a conta exposta é a que ele selecionou no switcher
+  // (ou 'default' como fallback) — nunca a conta '*' interna do superadmin
+  let conta = user?.conta ?? 'default';
+  if (isSuperAdmin) {
+    if (typeof window !== 'undefined') {
+      conta = localStorage.getItem('gestao_iphones_conta_override') || 'default';
+    } else {
+      conta = 'default';
+    }
+  }
 
   return (
     <AuthContext.Provider value={{ user, loading, isAdmin, isSuperAdmin, perfil, conta, login, logout }}>

@@ -22,10 +22,14 @@ const CONTA_OVERRIDE_KEY = 'gestao_iphones_conta_override';
 
 function getConta(): string {
   const user = getLoggedUser();
-  // Superadmin escolhe qual conta visualizar via override em localStorage
-  if (user?.perfil === 'superadmin' && typeof window !== 'undefined') {
-    const override = localStorage.getItem(CONTA_OVERRIDE_KEY);
-    if (override) return override;
+  // Superadmin nunca visualiza a conta '*' (que é só placeholder dele) —
+  // sempre olha através de uma conta real, default = 'default'
+  if (user?.perfil === 'superadmin') {
+    if (typeof window !== 'undefined') {
+      const override = localStorage.getItem(CONTA_OVERRIDE_KEY);
+      if (override) return override;
+    }
+    return 'default';
   }
   return user?.conta || 'default';
 }
