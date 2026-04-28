@@ -12,6 +12,7 @@ interface ProdutoPublico {
   bateria: string;
   descricao: string | null;
   fotos: string[];
+  precoPublico: number | null;
 }
 
 export async function GET(
@@ -41,11 +42,11 @@ export async function GET(
     whatsapp: string | null;
   };
 
-  // Produtos disponíveis (em estoque) — apenas dados públicos, sem valorCompra/lucro
+  // Produtos disponíveis (em estoque) com preço público — apenas dados públicos
   const produtosRows = await sql`
-    SELECT id, codigo, modelo, linha, gb, cor, estado, bateria, descricao, fotos
+    SELECT id, codigo, modelo, linha, gb, cor, estado, bateria, descricao, fotos, preco_publico
     FROM produtos
-    WHERE conta = ${slug} AND status = 'EM_ESTOQUE'
+    WHERE conta = ${slug} AND status = 'EM_ESTOQUE' AND preco_publico IS NOT NULL AND preco_publico > 0
     ORDER BY codigo DESC
   `;
 
@@ -61,6 +62,7 @@ export async function GET(
       bateria: string | null;
       descricao: string | null;
       fotos: string | null;
+      preco_publico: string | number | null;
     };
     return {
       id: row.id,
@@ -73,6 +75,7 @@ export async function GET(
       bateria: row.bateria || '',
       descricao: row.descricao || null,
       fotos: row.fotos ? JSON.parse(row.fotos) : [],
+      precoPublico: row.preco_publico !== null ? Number(row.preco_publico) : null,
     };
   });
 

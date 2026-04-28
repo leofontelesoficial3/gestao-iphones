@@ -29,6 +29,7 @@ function rowToProduto(r: any) {
     acrescimo: r.acrescimo ? Number(r.acrescimo) : undefined,
     fornecedorId: r.fornecedor_id ? Number(r.fornecedor_id) : undefined,
     descricao: r.descricao || undefined,
+    precoPublico: r.preco_publico !== null && r.preco_publico !== undefined ? Number(r.preco_publico) : undefined,
     enderecoCep: r.endereco_cep || undefined,
     enderecoLogradouro: r.endereco_logradouro || undefined,
     enderecoNumero: r.endereco_numero || undefined,
@@ -53,8 +54,8 @@ export async function POST(req: NextRequest) {
   const id = crypto.randomUUID();
 
   await sql`
-    INSERT INTO produtos (id, conta, data_entrada, codigo, modelo, linha, imei, possui_nota, gb, comp_trocado, cor, estado, bateria, valor_compra, status, fotos, fornecedor_id, descricao)
-    VALUES (${id}, ${body.conta || 'default'}, ${body.dataEntrada}, ${body.codigo}, ${body.modelo}, ${body.linha}, ${body.imei}, ${body.possuiNota}, ${body.gb}, ${body.compTrocado}, ${body.cor}, ${body.estado}, ${body.bateria}, ${body.valorCompra}, 'EM_ESTOQUE', ${body.fotos ? JSON.stringify(body.fotos) : null}, ${body.fornecedorId ?? null}, ${body.descricao ?? null})
+    INSERT INTO produtos (id, conta, data_entrada, codigo, modelo, linha, imei, possui_nota, gb, comp_trocado, cor, estado, bateria, valor_compra, status, fotos, fornecedor_id, descricao, preco_publico)
+    VALUES (${id}, ${body.conta || 'default'}, ${body.dataEntrada}, ${body.codigo}, ${body.modelo}, ${body.linha}, ${body.imei}, ${body.possuiNota}, ${body.gb}, ${body.compTrocado}, ${body.cor}, ${body.estado}, ${body.bateria}, ${body.valorCompra}, 'EM_ESTOQUE', ${body.fotos ? JSON.stringify(body.fotos) : null}, ${body.fornecedorId ?? null}, ${body.descricao ?? null}, ${body.precoPublico ?? null})
   `;
 
   const rows = await sql`SELECT * FROM produtos WHERE id = ${id}`;
@@ -93,6 +94,7 @@ export async function PUT(req: NextRequest) {
       acrescimo = ${updates.acrescimo ?? null},
       fornecedor_id = COALESCE(${updates.fornecedorId ?? null}, fornecedor_id),
       descricao = COALESCE(${updates.descricao ?? null}, descricao),
+      preco_publico = ${updates.precoPublico ?? null},
       endereco_cep = ${updates.enderecoCep ?? null},
       endereco_logradouro = ${updates.enderecoLogradouro ?? null},
       endereco_numero = ${updates.enderecoNumero ?? null},

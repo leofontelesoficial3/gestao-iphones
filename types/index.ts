@@ -20,6 +20,8 @@ export interface Produto {
   fotos?: string[]; // base64
   fornecedorId?: number;
   descricao?: string;
+  /** Preço de venda exibido na loja pública. Se não definido, produto não aparece na loja. */
+  precoPublico?: number;
   // Campos preenchidos quando VENDIDO
   dataVenda?: string;
   valorVenda?: number;

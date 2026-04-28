@@ -85,6 +85,9 @@ export async function GET() {
   await sql`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS endereco_uf VARCHAR(5)`;
   await sql`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS endereco_complemento VARCHAR(200)`;
 
+  // Preço público para a loja online (opcional, definido pelo admin)
+  await sql`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS preco_publico DECIMAL(10,2)`;
+
   // Tema da conta (estilo da página)
   await sql`ALTER TABLE contas ADD COLUMN IF NOT EXISTS tema_cor VARCHAR(20) DEFAULT 'azul'`;
   await sql`ALTER TABLE contas ADD COLUMN IF NOT EXISTS tema_logo TEXT`;

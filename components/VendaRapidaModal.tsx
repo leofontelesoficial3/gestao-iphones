@@ -45,6 +45,8 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
   const [fValorCompraTxt, setFValorCompraTxt] = useState('');
   const [fFornecedorId, setFFornecedorId] = useState<number | ''>('');
   const [fDescricao, setFDescricao] = useState('');
+  const [fPrecoPublico, setFPrecoPublico] = useState(0);
+  const [fPrecoPublicoTxt, setFPrecoPublicoTxt] = useState('');
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
@@ -121,11 +123,13 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
         fotos: [],
         fornecedorId: fFornecedorId ? Number(fFornecedorId) : undefined,
         descricao: fDescricao || undefined,
+        precoPublico: fPrecoPublico > 0 ? fPrecoPublico : undefined,
       });
       await onFornecedorCriado();
       onSelect(novo, 'fornecedor');
       // Reset
-      setFImei(''); setFValorCompra(0); setFValorCompraTxt(''); setFFornecedorId(''); setFDescricao('');
+      setFImei(''); setFValorCompra(0); setFValorCompraTxt(''); setFFornecedorId('');
+      setFDescricao(''); setFPrecoPublico(0); setFPrecoPublicoTxt('');
     } catch {
       setErro('Erro ao cadastrar produto do fornecedor.');
     } finally {
@@ -361,6 +365,21 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
                     value={fDescricao}
                     onChange={e => setFDescricao(e.target.value)}
                     placeholder="Observações sobre o aparelho (acessórios, marcas, etc.)"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="label">Preço na Loja Pública <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    className="input"
+                    value={fPrecoPublicoTxt}
+                    placeholder="R$ 0,00"
+                    onChange={e => {
+                      const txt = mascaraMoedaDigitada(e.target.value);
+                      setFPrecoPublicoTxt(txt);
+                      setFPrecoPublico(parseCentavos(txt));
+                    }}
                   />
                 </div>
               </div>

@@ -47,6 +47,7 @@ const empty = (): Omit<Produto, 'id'> => ({
 export default function ProdutoModal({ open, onClose, onSave, editProduto, nextCodigo }: Props) {
   const [form, setForm] = useState<Omit<Produto, 'id'>>(empty());
   const [valorCompraTxt, setValorCompraTxt] = useState('');
+  const [precoPublicoTxt, setPrecoPublicoTxt] = useState('');
   const [fotoAmpliada, setFotoAmpliada] = useState<string | null>(null);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -66,10 +67,16 @@ export default function ProdutoModal({ open, onClose, onSave, editProduto, nextC
       setValorCompraTxt(
         rest.valorCompra > 0 ? mascaraMoedaDigitada(String(Math.round(rest.valorCompra * 100))) : ''
       );
+      setPrecoPublicoTxt(
+        rest.precoPublico && rest.precoPublico > 0
+          ? mascaraMoedaDigitada(String(Math.round(rest.precoPublico * 100)))
+          : ''
+      );
     } else {
       // Novo: form vazio com próximo código
       setForm({ ...empty(), codigo: nextCodigo });
       setValorCompraTxt('');
+      setPrecoPublicoTxt('');
     }
   }, [editProduto, nextCodigo, open]);
 
@@ -187,7 +194,7 @@ export default function ProdutoModal({ open, onClose, onSave, editProduto, nextC
               <input type="text" className="input" value={form.bateria}
                 onChange={e => set('bateria', e.target.value)} placeholder="100 ou VERIFICAR" />
             </div>
-            <div className="col-span-2">
+            <div>
               <label className="label">Valor de Compra</label>
               <input
                 type="text"
@@ -202,6 +209,26 @@ export default function ProdutoModal({ open, onClose, onSave, editProduto, nextC
                 }}
                 required
               />
+            </div>
+            <div>
+              <label className="label">
+                Preço na Loja Pública
+                <span className="text-gray-400 text-xs font-normal ml-1">(opcional)</span>
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                className="input !font-semibold"
+                value={precoPublicoTxt}
+                placeholder="R$ 0,00"
+                onChange={e => {
+                  const txt = mascaraMoedaDigitada(e.target.value);
+                  setPrecoPublicoTxt(txt);
+                  const valor = parseCentavos(txt);
+                  set('precoPublico', valor > 0 ? valor : undefined);
+                }}
+              />
+              <p className="text-[10px] text-gray-400 mt-1">Sem preço, o produto não aparece no catálogo público.</p>
             </div>
             <div className="col-span-2">
               <label className="label">Fornecedor <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
