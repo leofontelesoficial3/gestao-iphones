@@ -29,7 +29,7 @@ interface ThemeContextValue {
   reload: () => Promise<void>;
 }
 
-const TemaPadrao: TemaConta = { cor: 'azul', logo: null };
+const TemaPadrao: TemaConta = { cor: 'azul', logo: null, whatsapp: null };
 
 const ThemeContext = createContext<ThemeContextValue>({
   tema: TemaPadrao,

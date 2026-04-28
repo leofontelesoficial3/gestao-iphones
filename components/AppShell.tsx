@@ -8,6 +8,12 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const pathname = usePathname();
   const isLogin = pathname === '/login';
+  const isLojaPublica = pathname.startsWith('/loja/');
+
+  // Loja pública: renderiza sem nav nem container — layout próprio
+  if (isLojaPublica) {
+    return <ProtectedRoute>{children}</ProtectedRoute>;
+  }
 
   return (
     <ProtectedRoute>

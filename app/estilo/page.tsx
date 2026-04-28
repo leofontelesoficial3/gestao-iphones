@@ -5,24 +5,40 @@ import { TemaCor } from '@/types';
 import { updateTema } from '@/lib/storage';
 import { useTheme, PALETAS } from '@/components/ThemeProvider';
 import { useAuth } from '@/components/AuthProvider';
+import { mascaraCelular } from '@/lib/format';
 
 const CORES_OPCOES: TemaCor[] = ['branco', 'preto', 'azul', 'vermelho', 'amarelo', 'laranja'];
 
 export default function EstiloPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, conta } = useAuth();
   const router = useRouter();
   const { tema, setTema, reload } = useTheme();
   const [corSel, setCorSel] = useState<TemaCor>(tema.cor);
   const [logo, setLogo] = useState<string | null>(tema.logo);
+  const [whatsapp, setWhatsapp] = useState<string>(tema.whatsapp ?? '');
   const [salvando, setSalvando] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [mensagem, setMensagem] = useState('');
+  const [linkCopiado, setLinkCopiado] = useState(false);
   const inputFotoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setCorSel(tema.cor);
     setLogo(tema.logo);
+    setWhatsapp(tema.whatsapp ?? '');
   }, [tema]);
+
+  const linkLoja = typeof window !== 'undefined' ? `${window.location.origin}/loja/${conta}` : '';
+
+  const copiarLink = async () => {
+    try {
+      await navigator.clipboard.writeText(linkLoja);
+      setLinkCopiado(true);
+      setTimeout(() => setLinkCopiado(false), 2000);
+    } catch {
+      alert('Não foi possível copiar. Selecione e copie manualmente.');
+    }
+  };
 
   useEffect(() => {
     if (!isAdmin) router.push('/');
@@ -56,7 +72,8 @@ export default function EstiloPage() {
     setSalvando(true);
     setMensagem('');
     try {
-      const novoTema = await updateTema(corSel, logo);
+      const whatsappLimpo = whatsapp.replace(/\D/g, '') || null;
+      const novoTema = await updateTema(corSel, logo, whatsappLimpo);
       setTema(novoTema);
       await reload();
       setMensagem('✅ Estilo salvo com sucesso!');
@@ -71,7 +88,7 @@ export default function EstiloPage() {
   // Preview ao vivo: aplica cor selecionada antes de salvar
   const handleSelecionarCor = (c: TemaCor) => {
     setCorSel(c);
-    setTema({ cor: c, logo });
+    setTema({ cor: c, logo, whatsapp: tema.whatsapp });
   };
 
   const paletaPreview = PALETAS[corSel];
@@ -180,6 +197,55 @@ export default function EstiloPage() {
               onChange={handleUploadLogo}
             />
           </div>
+        </div>
+      </div>
+
+      {/* WhatsApp da loja */}
+      <div className="bg-white rounded-2xl shadow p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-1">WhatsApp da Loja</h2>
+        <p className="text-xs text-gray-500 mb-4">
+          Número que receberá os pedidos da loja pública. Use formato com DDD: (85) 9 9999-9999
+        </p>
+        <input
+          type="tel"
+          inputMode="numeric"
+          className="input max-w-sm"
+          value={whatsapp}
+          onChange={e => setWhatsapp(mascaraCelular(e.target.value))}
+          placeholder="(00) 0 0000-0000"
+          maxLength={16}
+        />
+      </div>
+
+      {/* Link da Loja Pública */}
+      <div className="bg-white rounded-2xl shadow p-6">
+        <h2 className="text-lg font-semibold text-gray-800 mb-1">🛒 Loja Pública</h2>
+        <p className="text-xs text-gray-500 mb-4">
+          Link público que qualquer cliente pode acessar (sem login) para ver seu estoque e pedir um produto via WhatsApp.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="text"
+            readOnly
+            value={linkLoja}
+            className="input flex-1 font-mono text-xs"
+            onFocus={e => e.target.select()}
+          />
+          <button
+            onClick={copiarLink}
+            className="px-4 py-2 rounded-lg text-sm font-semibold text-white"
+            style={{ background: paletaPreview.primary }}
+          >
+            {linkCopiado ? '✅ Copiado!' : '📋 Copiar link'}
+          </button>
+          <a
+            href={linkLoja}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 text-center"
+          >
+            Abrir
+          </a>
         </div>
       </div>
 

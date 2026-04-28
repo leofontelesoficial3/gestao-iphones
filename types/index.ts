@@ -55,6 +55,7 @@ export type TemaCor = 'branco' | 'preto' | 'azul' | 'vermelho' | 'amarelo' | 'la
 export interface TemaConta {
   cor: TemaCor;
   logo: string | null;
+  whatsapp: string | null;
 }
 
 export interface Stats {

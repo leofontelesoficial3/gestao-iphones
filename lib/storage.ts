@@ -4,15 +4,15 @@ import { getLoggedUser } from './auth';
 // ── Tema da conta ─────────────────────────────────────────────
 export async function getTema(): Promise<TemaConta> {
   const res = await fetch(`/api/conta/tema?conta=${getConta()}`);
-  if (!res.ok) return { cor: 'azul', logo: null };
+  if (!res.ok) return { cor: 'azul', logo: null, whatsapp: null };
   return res.json();
 }
 
-export async function updateTema(cor: TemaCor, logo: string | null): Promise<TemaConta> {
+export async function updateTema(cor: TemaCor, logo: string | null, whatsapp: string | null): Promise<TemaConta> {
   const res = await fetch('/api/conta/tema', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ conta: getConta(), cor, logo }),
+    body: JSON.stringify({ conta: getConta(), cor, logo, whatsapp }),
   });
   if (!res.ok) throw new Error('Falha ao salvar tema');
   return res.json();
