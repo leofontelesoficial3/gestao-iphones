@@ -131,7 +131,7 @@ export default function Dashboard() {
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-xl md:text-2xl font-bold" style={{ color: '#3B3B4F' }}>
-          Dashboard — <span style={{ color: '#2E78B7' }}>iPhones Fortaleza</span>
+          Dashboard — <span style={{ color: 'var(--brand-primary)' }}>iPhones Fortaleza</span>
         </h1>
         <div className="flex gap-2 flex-wrap">
           <select
@@ -162,8 +162,8 @@ export default function Dashboard() {
         onClick={() => setVendaRapidaOpen(true)}
         className="group relative w-full overflow-hidden rounded-2xl p-5 md:p-6 text-left transition-all hover:scale-[1.01] active:scale-[0.99]"
         style={{
-          background: 'linear-gradient(135deg, #2E78B7 0%, #1a5a8f 50%, #3B3B4F 100%)',
-          boxShadow: '0 12px 40px rgba(46,120,183,0.35), inset 0 1px 0 rgba(255,255,255,0.12)',
+          background: 'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 50%, #3B3B4F 100%)',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.12)',
         }}
       >
         {/* Textura decorativa */}
@@ -238,7 +238,7 @@ export default function Dashboard() {
           <h2 className="text-lg font-semibold text-gray-800">
             {mesSel === 'TODOS' ? 'Últimas Vendas' : `Vendas de ${formatMesLabel(mesSel)}`}
           </h2>
-          <Link href="/vendas" className="text-sm hover:underline" style={{ color: '#2E78B7' }}>
+          <Link href="/vendas" className="text-sm hover:underline" style={{ color: 'var(--brand-primary)' }}>
             Ver todas →
           </Link>
         </div>

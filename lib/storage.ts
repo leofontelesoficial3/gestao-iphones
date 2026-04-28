@@ -1,5 +1,22 @@
-import { Produto, Stats, Fornecedor } from '@/types';
+import { Produto, Stats, Fornecedor, TemaConta, TemaCor } from '@/types';
 import { getLoggedUser } from './auth';
+
+// ── Tema da conta ─────────────────────────────────────────────
+export async function getTema(): Promise<TemaConta> {
+  const res = await fetch(`/api/conta/tema?conta=${getConta()}`);
+  if (!res.ok) return { cor: 'azul', logo: null };
+  return res.json();
+}
+
+export async function updateTema(cor: TemaCor, logo: string | null): Promise<TemaConta> {
+  const res = await fetch('/api/conta/tema', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ conta: getConta(), cor, logo }),
+  });
+  if (!res.ok) throw new Error('Falha ao salvar tema');
+  return res.json();
+}
 
 function getConta(): string {
   const user = getLoggedUser();

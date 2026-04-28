@@ -50,6 +50,13 @@ export interface Fornecedor {
   valorTotal?: number;
 }
 
+export type TemaCor = 'branco' | 'preto' | 'azul' | 'vermelho' | 'amarelo' | 'laranja';
+
+export interface TemaConta {
+  cor: TemaCor;
+  logo: string | null;
+}
+
 export interface Stats {
   totalFaturamento: number;
   totalLucro: number;

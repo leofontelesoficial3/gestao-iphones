@@ -148,7 +148,7 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
         <div className="px-6 pt-6 pb-4" style={{ background: 'linear-gradient(135deg, #3B3B4F 0%, #1a2a40 100%)' }}>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ color: '#8ab4d8' }}>
+              <p className="text-[10px] font-bold tracking-[0.2em] uppercase" style={{ color: 'var(--brand-primary-light)' }}>
                 Nova operação
               </p>
               <h2 className="text-xl font-extrabold tracking-tight text-white mt-0.5">
@@ -173,7 +173,7 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
               className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all ${
                 aba === 'estoque' ? 'text-white shadow-lg' : 'text-white/50 hover:text-white/80'
               }`}
-              style={aba === 'estoque' ? { background: '#2E78B7' } : {}}
+              style={aba === 'estoque' ? { background: 'var(--brand-primary)' } : {}}
             >
               📦 Do Estoque
             </button>
@@ -208,7 +208,7 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
                   placeholder="Código ou modelo (ex: 10023 ou iphone 16)"
                   className="w-full pl-11 pr-4 py-3 text-base rounded-xl border-2 bg-gray-50 focus:bg-white focus:outline-none transition-all"
                   style={{
-                    borderColor: busca ? '#2E78B7' : '#e5e7eb',
+                    borderColor: busca ? 'var(--brand-primary)' : '#e5e7eb',
                   }}
                   autoComplete="off"
                 />
@@ -249,7 +249,7 @@ export default function VendaRapidaModal({ open, onClose, produtos, onSelect, on
                           {p.modelo} <span className="text-gray-400 font-normal">{p.linha}</span>
                         </p>
                         <p className="text-[11px] text-gray-500 truncate mt-0.5 leading-tight">
-                          <span className="font-mono font-semibold" style={{ color: '#2E78B7' }}>#{p.codigo}</span>
+                          <span className="font-mono font-semibold" style={{ color: 'var(--brand-primary)' }}>#{p.codigo}</span>
                           <span className="text-gray-300 mx-1">·</span>
                           <span className="font-medium">{p.gb}</span>
                           <span className="text-gray-300 mx-1">·</span>

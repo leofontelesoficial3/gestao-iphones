@@ -197,8 +197,8 @@ export default function EstoquePage() {
         onClick={() => setVendaRapidaOpen(true)}
         className="group relative w-full overflow-hidden rounded-2xl p-4 md:p-5 text-left transition-all hover:scale-[1.01] active:scale-[0.99]"
         style={{
-          background: 'linear-gradient(135deg, #2E78B7 0%, #1a5a8f 50%, #3B3B4F 100%)',
-          boxShadow: '0 10px 32px rgba(46,120,183,0.32), inset 0 1px 0 rgba(255,255,255,0.12)',
+          background: 'linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-primary-dark) 50%, #3B3B4F 100%)',
+          boxShadow: '0 10px 32px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.12)',
         }}
       >
         <div

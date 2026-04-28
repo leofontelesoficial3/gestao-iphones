@@ -85,6 +85,10 @@ export async function GET() {
   await sql`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS endereco_uf VARCHAR(5)`;
   await sql`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS endereco_complemento VARCHAR(200)`;
 
+  // Tema da conta (estilo da página)
+  await sql`ALTER TABLE contas ADD COLUMN IF NOT EXISTS tema_cor VARCHAR(20) DEFAULT 'azul'`;
+  await sql`ALTER TABLE contas ADD COLUMN IF NOT EXISTS tema_logo TEXT`;
+
   // Seed users padrão
   const existingUsers = await sql`SELECT COUNT(*) as total FROM users`;
   if (Number(existingUsers[0].total) === 0) {

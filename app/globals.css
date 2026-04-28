@@ -7,6 +7,10 @@
   --brand-green: #5AAA4A;
   --brand-orange: #E8872D;
   --brand-yellow: #E8C42E;
+  /* Tema customizável (sobrescrito pelo ThemeProvider) */
+  --brand-primary: #2E78B7;
+  --brand-primary-dark: #1a5a8f;
+  --brand-primary-light: #eef5fb;
 }
 
 body {
