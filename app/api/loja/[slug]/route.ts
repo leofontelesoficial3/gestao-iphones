@@ -42,11 +42,11 @@ export async function GET(
     whatsapp: string | null;
   };
 
-  // Produtos disponíveis (em estoque) com preço público — apenas dados públicos
+  // Todos os produtos disponíveis (em estoque) — apenas dados públicos
   const produtosRows = await sql`
     SELECT id, codigo, modelo, linha, gb, cor, estado, bateria, descricao, fotos, preco_publico
     FROM produtos
-    WHERE conta = ${slug} AND status = 'EM_ESTOQUE' AND preco_publico IS NOT NULL AND preco_publico > 0
+    WHERE conta = ${slug} AND status = 'EM_ESTOQUE'
     ORDER BY codigo DESC
   `;
 

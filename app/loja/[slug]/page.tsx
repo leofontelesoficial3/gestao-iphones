@@ -296,16 +296,22 @@ export default function LojaPublicaPage({ params }: { params: Promise<{ slug: st
                           <p className="text-xs md:text-sm text-gray-500 font-medium">{p.gb}</p>
                           <p className="text-[10px] text-gray-400 truncate mt-0.5">{p.cor}</p>
                         </div>
-                        {p.precoPublico && (
-                          <div className="mt-2 space-y-0.5">
-                            <p className="font-extrabold text-gray-800 text-base md:text-lg leading-none">
-                              POR <span style={{ color: paleta.primary }}>{fmtMoeda(p.precoPublico)}</span>
+                        <div className="mt-2 space-y-0.5">
+                          {p.precoPublico ? (
+                            <>
+                              <p className="font-extrabold text-gray-800 text-base md:text-lg leading-none">
+                                POR <span style={{ color: paleta.primary }}>{fmtMoeda(p.precoPublico)}</span>
+                              </p>
+                              <p className="text-[10px] md:text-[11px] text-gray-500">
+                                ou 12x {fmtMoeda(parcela12x(p.precoPublico))}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="font-bold text-xs md:text-sm" style={{ color: paleta.primary }}>
+                              Consulte preço
                             </p>
-                            <p className="text-[10px] md:text-[11px] text-gray-500">
-                              ou 12x {fmtMoeda(parcela12x(p.precoPublico))}
-                            </p>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </article>
                   );
@@ -436,22 +442,33 @@ export default function LojaPublicaPage({ params }: { params: Promise<{ slug: st
                 <p className="text-sm text-gray-500 mt-0.5">{produtoSel.gb} · {produtoSel.cor}</p>
               </div>
 
-              {produtoSel.precoPublico && (
-                <div
-                  className="rounded-xl p-4 text-center"
-                  style={{ background: paleta.primaryLight }}
-                >
-                  <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: paleta.primaryDark }}>
-                    Por
-                  </p>
-                  <p className="text-3xl font-extrabold" style={{ color: paleta.primary }}>
-                    {fmtMoeda(produtoSel.precoPublico)}
-                  </p>
-                  <p className="text-xs text-gray-600 mt-0.5">
-                    ou 12x de <strong>{fmtMoeda(parcela12x(produtoSel.precoPublico))}</strong>
-                  </p>
-                </div>
-              )}
+              <div
+                className="rounded-xl p-4 text-center"
+                style={{ background: paleta.primaryLight }}
+              >
+                {produtoSel.precoPublico ? (
+                  <>
+                    <p className="text-[10px] uppercase tracking-widest font-bold" style={{ color: paleta.primaryDark }}>
+                      Por
+                    </p>
+                    <p className="text-3xl font-extrabold" style={{ color: paleta.primary }}>
+                      {fmtMoeda(produtoSel.precoPublico)}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      ou 12x de <strong>{fmtMoeda(parcela12x(produtoSel.precoPublico))}</strong>
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-base md:text-lg font-extrabold" style={{ color: paleta.primary }}>
+                      Consulte o preço
+                    </p>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      Fale conosco no WhatsApp para tirar dúvidas e fazer seu pedido.
+                    </p>
+                  </>
+                )}
+              </div>
 
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div className="bg-gray-50 rounded-lg p-2.5">
