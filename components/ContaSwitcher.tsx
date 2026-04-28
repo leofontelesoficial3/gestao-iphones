@@ -31,14 +31,11 @@ export default function ContaSwitcher() {
       style={{ backdropFilter: 'blur(4px)' }}
       title="Visualizar dados da conta"
     >
-      <option value="default" className="text-gray-800">📁 default</option>
-      {contas
-        .filter(c => c.conta !== 'default')
-        .map(c => (
-          <option key={c.conta} value={c.conta} className="text-gray-800">
-            🏪 {c.nomeLoja || c.conta} ({c.totalProdutos})
-          </option>
-        ))}
+      {contas.map(c => (
+        <option key={c.conta} value={c.conta} className="text-gray-800">
+          🏪 {c.nomeLoja || c.conta} ({c.totalProdutos})
+        </option>
+      ))}
     </select>
   );
 }
