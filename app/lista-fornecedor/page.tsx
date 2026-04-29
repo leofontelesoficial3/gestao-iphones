@@ -15,7 +15,7 @@ const fmtMoeda = (v: number) =>
 const APARELHOS = ['IPHONE 11','IPHONE 12','IPHONE 13','IPHONE 14','IPHONE 15','IPHONE 16','IPHONE 17','IPHONE SE'];
 const LINHAS = ['NORMAL','PLUS','PRO','PRO MAX','AIR','MINI'];
 const CAPACIDADES = ['64 GB','128 GB','256 GB','512 GB','1 TB','2 TB'];
-const CORES = ['BRANCO','PRETO','AZUL','VERDE','ROSA','CINZA','GOLD','ROSE','ROXO','NATURAL','DESERT'];
+const CORES = ['BRANCO','PRETO','AZUL','VERDE','ROSA','CINZA','GOLD','AMARELO','ROSE','ROXO','NATURAL','DESERT','VERMELHO','SILVER','LARANJA'];
 const BATERIAS_SUGERIDAS = ['80%','85%','90%','95%','100%'];
 
 interface FormState {
@@ -57,7 +57,15 @@ function whatsappUrl(telefone: string, texto: string): string {
 }
 
 // ────────────────────────────────────────────────────────────────
-// PARSER da lista colada
+// PARSER da lista colada (formato multi-linha por bloco)
+//
+// Formato esperado:
+//   12 pro 128gb           <- modelo (sticky até aparecer outro)
+//   Azul💙                  <- cor (inicia uma seção)
+//   🔋90% 100%             <- baterias da cor anterior
+//   Branco🤍
+//   🔋100% 100%
+//   $1900.                 <- preço (fecha o bloco)
 // ────────────────────────────────────────────────────────────────
 
 interface ParsedItem {
@@ -72,83 +80,197 @@ interface ParsedItem {
   motivo?: string;
 }
 
-function parseLinhaLista(linha: string): ParsedItem {
-  const raw = linha.trim();
-  const lower = raw.toLowerCase();
+interface ModeloInfo {
+  aparelho: string;
+  linha: string;
+  capacidade: string;
+}
 
-  // Detecta modelo (iPhone 11..17 ou iPhone SE)
-  const modeloMatch = lower.match(/iphone\s*(11|12|13|14|15|16|17|se)\b/i);
-  if (!modeloMatch) {
-    return {
-      ok: false, raw, aparelho: '', linha: 'NORMAL', capacidade: '128 GB',
-      cores: [], baterias: [], valorFornecedor: 0,
-      motivo: 'Não foi possível identificar o modelo (ex: iPhone 14, iPhone SE).',
-    };
-  }
-  const aparelho = `IPHONE ${modeloMatch[1].toUpperCase()}`;
+const COLOR_PATTERNS: Array<[RegExp, string]> = [
+  [/\bbranco\b/i, 'BRANCO'],
+  [/\bpreto\b/i, 'PRETO'],
+  [/\bazul\b/i, 'AZUL'],
+  [/\bverde\b/i, 'VERDE'],
+  [/\bvermelho\b/i, 'VERMELHO'],
+  [/\bamarelo\b/i, 'AMARELO'],
+  [/\blaranja\b/i, 'LARANJA'],
+  [/\bdesert\b/i, 'DESERT'],
+  [/\bnatural\b/i, 'NATURAL'],
+  [/\bsilver\b/i, 'SILVER'],
+  [/\bgold\b/i, 'GOLD'],
+  [/\brose\b/i, 'ROSE'],
+  [/\brosa\b/i, 'ROSA'],
+  [/\broxo\b/i, 'ROXO'],
+  [/\bcinza\b/i, 'CINZA'],
+];
 
-  // Detecta linha (Pro Max > Pro > Plus > Air > Mini)
-  let linhaModel = 'NORMAL';
-  if (/\bpro\s*max\b/i.test(lower)) linhaModel = 'PRO MAX';
-  else if (/\bpro\b/i.test(lower)) linhaModel = 'PRO';
-  else if (/\bplus\b/i.test(lower)) linhaModel = 'PLUS';
-  else if (/\bair\b/i.test(lower)) linhaModel = 'AIR';
-  else if (/\bmini\b/i.test(lower)) linhaModel = 'MINI';
+function parseModeloLinha(linha: string): ModeloInfo | null {
+  // Tenta casar "12 pro 128gb", "13 256gb", "16 pro max 256gb", "17 Pro 256gb", "iphone se 64gb"...
+  const cleaned = linha.replace(/[^\w\s]/g, ' ').trim();
+  const re = /^(?:iphone\s*)?(11|12|13|14|15|16|17|se)\s*(pro\s*max|pro|plus|air|mini|normal)?\s*(\d+)\s*(gb|tb)$/i;
+  const m = cleaned.match(re);
+  if (!m) return null;
 
-  // Capacidade — busca "256 gb" / "256gb" / "1 tb" / "1tb"
-  let capacidade = '128 GB';
-  const capMatch = lower.match(/(\d+)\s*(gb|tb)\b/i);
-  if (capMatch) {
-    const num = capMatch[1];
-    const unit = capMatch[2].toUpperCase();
-    capacidade = `${num} ${unit}`;
-  }
-
-  // Cores — encontra todas as cores conhecidas que aparecem no texto
-  const cores = CORES.filter(c => {
-    const re = new RegExp(`\\b${c.toLowerCase()}\\b`, 'i');
-    return re.test(lower);
-  });
-
-  // Baterias — pega percentuais entre 50 e 100 que NÃO sejam parte do modelo (iphone 17 não conta)
-  // Estratégia: remove a parte do modelo antes de buscar
-  const semModelo = lower.replace(/iphone\s*(11|12|13|14|15|16|17|se)/i, '');
-  const bateriaMatches = Array.from(semModelo.matchAll(/(\d{2,3})\s*%/g))
-    .map(m => parseInt(m[1]))
-    .filter(n => n >= 50 && n <= 100);
-  const baterias = Array.from(new Set(bateriaMatches)).map(n => `${n}%`);
-
-  // Valor — pega o último número R$ X.XXX,XX ou X.XXX
-  // Estratégia: pega todos os números (ignorando os percentuais já capturados),
-  // o maior costuma ser o preço
-  const numeros: number[] = [];
-  const semBateria = semModelo.replace(/\d{2,3}\s*%/g, '');
-  const numMatches = Array.from(semBateria.matchAll(/r?\$?\s*([\d.,]{3,})/gi));
-  for (const m of numMatches) {
-    const cleaned = m[1].replace(/\./g, '').replace(',', '.');
-    const v = parseFloat(cleaned);
-    if (!isNaN(v) && v >= 100) numeros.push(v);
-  }
-  const valorFornecedor = numeros.length ? Math.max(...numeros) : 0;
+  const numero = m[1].toUpperCase();
+  const lin = m[2] ? m[2].toUpperCase().replace(/\s+/g, ' ').trim() : 'NORMAL';
+  const cap = `${m[3]} ${m[4].toUpperCase()}`;
 
   return {
-    ok: true,
-    raw,
-    aparelho,
-    linha: linhaModel,
-    capacidade,
-    cores,
-    baterias,
-    valorFornecedor,
+    aparelho: `IPHONE ${numero}`,
+    linha: lin,
+    capacidade: cap,
   };
 }
 
+function detectColorInLine(linha: string): string | null {
+  for (const [re, nome] of COLOR_PATTERNS) {
+    if (re.test(linha)) return nome;
+  }
+  return null;
+}
+
+function parsePrecoLinha(linha: string): number | null {
+  // "$1900.", "1900", "R$ 1.900", "$2400. "
+  const m = linha.replace(/\s+/g, '').match(/^r?\$?([\d.,]+)\.?$/i);
+  if (!m) return null;
+  const cleaned = m[1].replace(/\./g, '').replace(',', '.');
+  const v = parseFloat(cleaned);
+  if (isNaN(v) || v < 100) return null;
+  return Math.round(v);
+}
+
+function extrairBaterias(linha: string): string[] {
+  const matches = Array.from(linha.matchAll(/(\d{2,3})\s*%/g));
+  const ns = matches
+    .map(m => parseInt(m[1]))
+    .filter(n => n >= 50 && n <= 100)
+    .map(n => `${n}%`);
+  return ns;
+}
+
+function processarBloco(
+  modelo: ModeloInfo,
+  bodyLines: string[],
+  valorFornecedor: number,
+  rawBlock: string,
+): ParsedItem[] {
+  // Dentro do bloco, agrupa: cor → baterias seguintes
+  interface Section { cor: string | null; baterias: string[]; }
+  const sections: Section[] = [];
+  let currentCor: string | null = null;
+  let currentBat: string[] = [];
+  let pendingBat: string[] = []; // baterias que aparecem antes de qualquer cor
+
+  const flush = () => {
+    if (currentCor) {
+      sections.push({ cor: currentCor, baterias: currentBat });
+      currentCor = null;
+      currentBat = [];
+    }
+  };
+
+  for (const linha of bodyLines) {
+    const cor = detectColorInLine(linha);
+    if (cor) {
+      flush();
+      currentCor = cor;
+      // Se tinha baterias órfãs antes da primeira cor, adota nesta
+      if (pendingBat.length > 0) {
+        currentBat.push(...pendingBat);
+        pendingBat = [];
+      }
+      continue;
+    }
+    const bs = extrairBaterias(linha);
+    if (bs.length > 0) {
+      if (currentCor) currentBat.push(...bs);
+      else pendingBat.push(...bs);
+    }
+  }
+  flush();
+
+  // Se não detectou nenhuma cor mas tem baterias, cria uma seção sem cor
+  if (sections.length === 0 && pendingBat.length > 0) {
+    sections.push({ cor: null, baterias: pendingBat });
+  }
+
+  // Se não tem nem cor nem bateria mas tem o modelo e preço, ainda gera 1 item
+  if (sections.length === 0) {
+    sections.push({ cor: null, baterias: [] });
+  }
+
+  return sections.map(sec => ({
+    ok: true,
+    raw: rawBlock,
+    aparelho: modelo.aparelho,
+    linha: modelo.linha,
+    capacidade: modelo.capacidade,
+    cores: sec.cor ? [sec.cor] : [],
+    baterias: Array.from(new Set(sec.baterias)),
+    valorFornecedor,
+  }));
+}
+
 function parseListaCompleta(texto: string): ParsedItem[] {
-  return texto
-    .split(/\r?\n/)
-    .map(l => l.trim())
-    .filter(Boolean)
-    .map(parseLinhaLista);
+  const linhas = texto.split(/\r?\n/).map(l => l.trim());
+  const resultado: ParsedItem[] = [];
+
+  let modeloAtual: ModeloInfo | null = null;
+  let bodyAtual: string[] = [];
+  let rawAtual: string[] = [];
+
+  for (const linha of linhas) {
+    if (!linha) continue;
+
+    // Tenta interpretar como modelo
+    const novoModelo = parseModeloLinha(linha);
+    if (novoModelo) {
+      modeloAtual = novoModelo;
+      bodyAtual = [];
+      rawAtual = [linha];
+      continue;
+    }
+
+    // Tenta interpretar como preço (fecha o bloco)
+    const preco = parsePrecoLinha(linha);
+    if (preco !== null) {
+      rawAtual.push(linha);
+      if (!modeloAtual) {
+        resultado.push({
+          ok: false,
+          raw: rawAtual.join('\n'),
+          aparelho: '', linha: 'NORMAL', capacidade: '128 GB',
+          cores: [], baterias: [], valorFornecedor: 0,
+          motivo: 'Preço encontrado sem modelo definido acima.',
+        });
+        bodyAtual = [];
+        rawAtual = [];
+        continue;
+      }
+      const itens = processarBloco(modeloAtual, bodyAtual, preco, rawAtual.join('\n'));
+      resultado.push(...itens);
+      bodyAtual = [];
+      rawAtual = [];
+      continue;
+    }
+
+    // Senão é parte do corpo (cor, bateria ou ruído)
+    bodyAtual.push(linha);
+    rawAtual.push(linha);
+  }
+
+  // Se sobrou body sem preço final, marca como erro
+  if (bodyAtual.length > 0 && rawAtual.length > 0) {
+    resultado.push({
+      ok: false,
+      raw: rawAtual.join('\n'),
+      aparelho: '', linha: 'NORMAL', capacidade: '128 GB',
+      cores: [], baterias: [], valorFornecedor: 0,
+      motivo: 'Bloco sem preço no final.',
+    });
+  }
+
+  return resultado;
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -869,40 +991,45 @@ export default function ListaFornecedorPage() {
               {/* Pré-visualização */}
               {parsedItens.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-gray-600">Itens detectados ({parsedItens.filter(p => p.ok).length} de {parsedItens.length}):</p>
-                  <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  <p className="text-xs font-semibold text-gray-600">
+                    Itens detectados ({parsedItens.filter(p => p.ok).length} de {parsedItens.length}):
+                  </p>
+                  <div className="space-y-1.5 max-h-80 overflow-y-auto">
                     {parsedItens.map((p, idx) => (
                       <div
                         key={idx}
-                        className={`text-xs p-2.5 rounded-lg border flex items-start justify-between gap-2 ${
+                        className={`text-xs p-2 rounded-lg border flex items-center justify-between gap-2 ${
                           p.ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
                         }`}
                       >
                         <div className="flex-1 min-w-0">
                           {p.ok ? (
-                            <>
-                              <p className="font-bold text-gray-800">
-                                ✓ {p.aparelho} {p.linha} {p.capacidade}
-                                {p.valorFornecedor > 0 && (
-                                  <span className="ml-2 text-green-700">{fmtMoeda(p.valorFornecedor)}</span>
-                                )}
-                              </p>
-                              <p className="text-[11px] text-gray-500 truncate">
-                                {p.cores.length ? `Cores: ${p.cores.join(', ')}` : 'Sem cor (assumirá PRETO)'}
-                                {p.baterias.length ? ` · 🔋 ${p.baterias.join(', ')}` : ''}
-                              </p>
-                              <p className="text-[10px] text-gray-400 truncate italic">{p.raw}</p>
-                            </>
+                            <p className="font-semibold text-gray-800">
+                              <span className="inline-block min-w-[170px]">
+                                {p.aparelho} {p.linha} {p.capacidade}
+                              </span>
+                              {' · '}
+                              <span className="text-gray-700">
+                                {p.cores.length ? p.cores.join(', ') : '⚠ sem cor'}
+                              </span>
+                              {p.baterias.length > 0 && (
+                                <span className="text-gray-500"> · 🔋 {p.baterias.join(' ')}</span>
+                              )}
+                              {p.valorFornecedor > 0 && (
+                                <span className="ml-2 font-bold text-green-700">{fmtMoeda(p.valorFornecedor)}</span>
+                              )}
+                            </p>
                           ) : (
                             <>
                               <p className="font-bold text-red-700">✕ {p.motivo}</p>
-                              <p className="text-[10px] text-gray-500 truncate italic">{p.raw}</p>
+                              <p className="text-[10px] text-gray-500 italic line-clamp-2">{p.raw}</p>
                             </>
                           )}
                         </div>
                         <button
                           onClick={() => removerParseado(idx)}
                           className="text-gray-400 hover:text-red-600 text-xs flex-shrink-0"
+                          title="Remover este item"
                         >
                           ✕
                         </button>

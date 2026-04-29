@@ -21,9 +21,12 @@ const MAPA_CORES_SUAVES: Record<string, string> = {
 
   // Vermelhos e rosas
   RED: '#fef2f2',
+  VERMELHO: '#fef2f2',
   CORAL: '#fff1f2',
   ROSA: '#fdf2f8',
+  ROSE: '#fdf2f8',
   'ROSE GOLD': '#fdf2f8',
+  CINZA: '#f3f4f6',
 
   // Verdes
   VERDE: '#f0fdf4',
@@ -42,6 +45,7 @@ const MAPA_CORES_SUAVES: Record<string, string> = {
   // Laranjas
   LARANJA: '#fff7ed',
   'DESERT TITANIUM': '#fffbeb',
+  DESERT: '#fffbeb',
 
   // Roxos
   ROXO: '#faf5ff',
