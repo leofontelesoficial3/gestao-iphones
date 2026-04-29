@@ -75,6 +75,8 @@ export interface ItemListaFornecedor {
   tipoLucro: TipoLucro;
   /** Valor — interpretado como % do valorFornecedor (se percentual) ou R$ fixo (se fixo) */
   margemLucro: number;
+  /** Vínculo opcional com cadastro de fornecedor */
+  fornecedorId?: number;
   observacao?: string;
 }
 

@@ -109,6 +109,11 @@ export async function GET() {
   await sql`ALTER TABLE lista_fornecedor ADD COLUMN IF NOT EXISTS tipo_lucro VARCHAR(20) DEFAULT 'percentual'`;
   // Valor de fornecedor — base sobre a qual o lucro é calculado
   await sql`ALTER TABLE lista_fornecedor ADD COLUMN IF NOT EXISTS valor_fornecedor DECIMAL(10,2) DEFAULT 0`;
+  // Vínculo com cadastro de fornecedor (para botão WhatsApp)
+  await sql`ALTER TABLE lista_fornecedor ADD COLUMN IF NOT EXISTS fornecedor_id INTEGER`;
+
+  // Timestamp da última compilação de lista por importação em massa
+  await sql`ALTER TABLE contas ADD COLUMN IF NOT EXISTS lista_compilacao_at TIMESTAMP`;
 
   // Tema da conta (estilo da página)
   await sql`ALTER TABLE contas ADD COLUMN IF NOT EXISTS tema_cor VARCHAR(20) DEFAULT 'azul'`;

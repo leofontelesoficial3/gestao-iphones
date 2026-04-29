@@ -90,6 +90,22 @@ export async function deleteItemListaFornecedor(id: number): Promise<void> {
   await fetch(`/api/lista-fornecedor?id=${id}`, { method: 'DELETE' });
 }
 
+export async function getCompilacaoLista(): Promise<{ at: string | null }> {
+  const res = await fetch(`/api/lista-fornecedor/compilacao?conta=${getConta()}`);
+  if (!res.ok) return { at: null };
+  return res.json();
+}
+
+export async function marcarCompilacaoLista(): Promise<{ at: string | null }> {
+  const res = await fetch('/api/lista-fornecedor/compilacao', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ conta: getConta() }),
+  });
+  if (!res.ok) return { at: null };
+  return res.json();
+}
+
 // ── Fornecedores ──────────────────────────────────────────────
 export async function getFornecedores(withStats = false): Promise<Fornecedor[]> {
   const qs = new URLSearchParams({ conta: getConta() });

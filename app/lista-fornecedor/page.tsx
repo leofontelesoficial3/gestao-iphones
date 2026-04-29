@@ -1,7 +1,10 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { ItemListaFornecedor, TipoLucro } from '@/types';
-import { getListaFornecedor, addItemListaFornecedor, updateItemListaFornecedor, deleteItemListaFornecedor } from '@/lib/storage';
+import { ItemListaFornecedor, TipoLucro, Fornecedor } from '@/types';
+import {
+  getListaFornecedor, addItemListaFornecedor, updateItemListaFornecedor, deleteItemListaFornecedor,
+  getFornecedores, getCompilacaoLista, marcarCompilacaoLista,
+} from '@/lib/storage';
 import { useAuth } from '@/components/AuthProvider';
 import { corSuave } from '@/lib/cores';
 import { mascaraMoedaDigitada, parseCentavos } from '@/lib/format';
@@ -24,6 +27,7 @@ interface FormState {
   valorFornecedor: number;
   tipoLucro: TipoLucro;
   margemLucro: number;
+  fornecedorId?: number;
   observacao: string;
 }
 
@@ -36,6 +40,7 @@ const empty = (): FormState => ({
   valorFornecedor: 0,
   tipoLucro: 'percentual',
   margemLucro: 15,
+  fornecedorId: undefined,
   observacao: '',
 });
 
@@ -44,9 +49,114 @@ function calcularLucro(valorFornecedor: number, tipoLucro: TipoLucro, margemLucr
   return (valorFornecedor * margemLucro) / 100;
 }
 
+// Limpa telefone para WhatsApp: retorna apenas dígitos com 55 na frente
+function whatsappUrl(telefone: string, texto: string): string {
+  const digits = telefone.replace(/\D/g, '');
+  const num = digits.startsWith('55') ? digits : `55${digits}`;
+  return `https://wa.me/${num}?text=${encodeURIComponent(texto)}`;
+}
+
+// ────────────────────────────────────────────────────────────────
+// PARSER da lista colada
+// ────────────────────────────────────────────────────────────────
+
+interface ParsedItem {
+  ok: boolean;
+  raw: string;
+  aparelho: string;
+  linha: string;
+  capacidade: string;
+  cores: string[];
+  baterias: string[];
+  valorFornecedor: number;
+  motivo?: string;
+}
+
+function parseLinhaLista(linha: string): ParsedItem {
+  const raw = linha.trim();
+  const lower = raw.toLowerCase();
+
+  // Detecta modelo (iPhone 11..17 ou iPhone SE)
+  const modeloMatch = lower.match(/iphone\s*(11|12|13|14|15|16|17|se)\b/i);
+  if (!modeloMatch) {
+    return {
+      ok: false, raw, aparelho: '', linha: 'NORMAL', capacidade: '128 GB',
+      cores: [], baterias: [], valorFornecedor: 0,
+      motivo: 'Não foi possível identificar o modelo (ex: iPhone 14, iPhone SE).',
+    };
+  }
+  const aparelho = `IPHONE ${modeloMatch[1].toUpperCase()}`;
+
+  // Detecta linha (Pro Max > Pro > Plus > Air > Mini)
+  let linhaModel = 'NORMAL';
+  if (/\bpro\s*max\b/i.test(lower)) linhaModel = 'PRO MAX';
+  else if (/\bpro\b/i.test(lower)) linhaModel = 'PRO';
+  else if (/\bplus\b/i.test(lower)) linhaModel = 'PLUS';
+  else if (/\bair\b/i.test(lower)) linhaModel = 'AIR';
+  else if (/\bmini\b/i.test(lower)) linhaModel = 'MINI';
+
+  // Capacidade — busca "256 gb" / "256gb" / "1 tb" / "1tb"
+  let capacidade = '128 GB';
+  const capMatch = lower.match(/(\d+)\s*(gb|tb)\b/i);
+  if (capMatch) {
+    const num = capMatch[1];
+    const unit = capMatch[2].toUpperCase();
+    capacidade = `${num} ${unit}`;
+  }
+
+  // Cores — encontra todas as cores conhecidas que aparecem no texto
+  const cores = CORES.filter(c => {
+    const re = new RegExp(`\\b${c.toLowerCase()}\\b`, 'i');
+    return re.test(lower);
+  });
+
+  // Baterias — pega percentuais entre 50 e 100 que NÃO sejam parte do modelo (iphone 17 não conta)
+  // Estratégia: remove a parte do modelo antes de buscar
+  const semModelo = lower.replace(/iphone\s*(11|12|13|14|15|16|17|se)/i, '');
+  const bateriaMatches = Array.from(semModelo.matchAll(/(\d{2,3})\s*%/g))
+    .map(m => parseInt(m[1]))
+    .filter(n => n >= 50 && n <= 100);
+  const baterias = Array.from(new Set(bateriaMatches)).map(n => `${n}%`);
+
+  // Valor — pega o último número R$ X.XXX,XX ou X.XXX
+  // Estratégia: pega todos os números (ignorando os percentuais já capturados),
+  // o maior costuma ser o preço
+  const numeros: number[] = [];
+  const semBateria = semModelo.replace(/\d{2,3}\s*%/g, '');
+  const numMatches = Array.from(semBateria.matchAll(/r?\$?\s*([\d.,]{3,})/gi));
+  for (const m of numMatches) {
+    const cleaned = m[1].replace(/\./g, '').replace(',', '.');
+    const v = parseFloat(cleaned);
+    if (!isNaN(v) && v >= 100) numeros.push(v);
+  }
+  const valorFornecedor = numeros.length ? Math.max(...numeros) : 0;
+
+  return {
+    ok: true,
+    raw,
+    aparelho,
+    linha: linhaModel,
+    capacidade,
+    cores,
+    baterias,
+    valorFornecedor,
+  };
+}
+
+function parseListaCompleta(texto: string): ParsedItem[] {
+  return texto
+    .split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(Boolean)
+    .map(parseLinhaLista);
+}
+
+// ────────────────────────────────────────────────────────────────
+
 export default function ListaFornecedorPage() {
   const { isAdmin } = useAuth();
   const [itens, setItens] = useState<ItemListaFornecedor[]>([]);
+  const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [editandoId, setEditandoId] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<FormState>(empty());
@@ -56,10 +166,27 @@ export default function ListaFornecedorPage() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const [filtroAparelho, setFiltroAparelho] = useState('');
+  const [compilacaoAt, setCompilacaoAt] = useState<string | null>(null);
+
+  // Importador
+  const [showImport, setShowImport] = useState(false);
+  const [textoImport, setTextoImport] = useState('');
+  const [parsedItens, setParsedItens] = useState<ParsedItem[]>([]);
+  const [importTipoLucro, setImportTipoLucro] = useState<TipoLucro>('percentual');
+  const [importMargem, setImportMargem] = useState(15);
+  const [importMargemFixoTxt, setImportMargemFixoTxt] = useState('');
+  const [importFornecedorId, setImportFornecedorId] = useState<number | ''>('');
+  const [importando, setImportando] = useState(false);
 
   const load = useCallback(async () => {
-    const lista = await getListaFornecedor();
+    const [lista, fs, comp] = await Promise.all([
+      getListaFornecedor(),
+      getFornecedores(),
+      getCompilacaoLista(),
+    ]);
     setItens(lista);
+    setFornecedores(fs);
+    setCompilacaoAt(comp.at);
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -102,6 +229,7 @@ export default function ListaFornecedorPage() {
         valorFornecedor: form.valorFornecedor,
         tipoLucro: form.tipoLucro,
         margemLucro: form.margemLucro,
+        fornecedorId: form.fornecedorId,
         observacao: form.observacao || undefined,
       };
       if (editandoId) {
@@ -132,6 +260,7 @@ export default function ListaFornecedorPage() {
       valorFornecedor: item.valorFornecedor,
       tipoLucro: item.tipoLucro,
       margemLucro: item.margemLucro,
+      fornecedorId: item.fornecedorId,
       observacao: item.observacao || '',
     });
     setValorFornecedorTxt(
@@ -152,11 +281,86 @@ export default function ListaFornecedorPage() {
     await load();
   };
 
+  // ── Importador ──
+  const analisar = () => {
+    const itens = parseListaCompleta(textoImport);
+    setParsedItens(itens);
+  };
+
+  const removerParseado = (idx: number) => {
+    setParsedItens(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const importarTudo = async () => {
+    if (parsedItens.filter(p => p.ok).length === 0) {
+      alert('Nada para importar. Cole uma lista e clique em "Analisar".');
+      return;
+    }
+    setImportando(true);
+    try {
+      const margemFixo = parseCentavos(importMargemFixoTxt);
+      const margemUsada = importTipoLucro === 'fixo' ? margemFixo : importMargem;
+      for (const p of parsedItens) {
+        if (!p.ok) continue;
+        await addItemListaFornecedor({
+          aparelho: p.aparelho,
+          linha: p.linha,
+          capacidade: p.capacidade,
+          cores: p.cores.length ? p.cores : ['PRETO'], // fallback se não detectou cor
+          baterias: p.baterias,
+          valorFornecedor: p.valorFornecedor,
+          tipoLucro: importTipoLucro,
+          margemLucro: margemUsada,
+          fornecedorId: importFornecedorId ? Number(importFornecedorId) : undefined,
+          observacao: undefined,
+        });
+      }
+      await marcarCompilacaoLista();
+      await load();
+      setShowImport(false);
+      setTextoImport('');
+      setParsedItens([]);
+    } catch {
+      alert('Erro ao importar a lista.');
+    } finally {
+      setImportando(false);
+    }
+  };
+
   const itensFiltrados = filtroAparelho
     ? itens.filter(i => i.aparelho === filtroAparelho)
     : itens;
-
   const aparelhosDisponiveis = Array.from(new Set(itens.map(i => i.aparelho)));
+
+  // Helpers
+  const fornecedorDoItem = (item: ItemListaFornecedor) =>
+    item.fornecedorId ? fornecedores.find(f => f.id === item.fornecedorId) : undefined;
+
+  const enviarWhatsAppFornecedor = (item: ItemListaFornecedor) => {
+    const f = fornecedorDoItem(item);
+    if (!f || !f.telefone) {
+      alert('Este item não tem fornecedor com telefone cadastrado.');
+      return;
+    }
+    const total = item.valorFornecedor + calcularLucro(item.valorFornecedor, item.tipoLucro, item.margemLucro);
+    const texto = [
+      `Olá, ${f.nome}!`,
+      `Tenho interesse no produto:`,
+      ``,
+      `📱 *${item.aparelho} ${item.linha}* — ${item.capacidade}`,
+      item.cores.length ? `Cores: ${item.cores.join(', ')}` : '',
+      item.baterias.length ? `Bateria: ${item.baterias.join(', ')}` : '',
+      item.valorFornecedor > 0 ? `\nValor: ${fmtMoeda(item.valorFornecedor)}` : '',
+      item.valorFornecedor > 0 ? `Preço sugerido de venda: ${fmtMoeda(total)}` : '',
+    ].filter(Boolean).join('\n');
+    window.open(whatsappUrl(f.telefone, texto), '_blank');
+  };
+
+  const formatarCompilacao = (at: string | null): string => {
+    if (!at) return 'Nenhuma compilação ainda';
+    const d = new Date(at);
+    return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+  };
 
   return (
     <div className="space-y-4">
@@ -166,14 +370,26 @@ export default function ListaFornecedorPage() {
           <p className="text-sm text-gray-500 mt-0.5">
             Catálogo de aparelhos disponíveis no fornecedor (segundo estoque) com margem de lucro desejada.
           </p>
+          <p className="text-xs text-gray-400 mt-1">
+            🕒 Última compilação: <span className="font-semibold text-gray-600">{formatarCompilacao(compilacaoAt)}</span>
+          </p>
         </div>
-        <button
-          onClick={() => { setEditandoId(null); setForm(empty()); setValorFornecedorTxt(''); setLucroFixoTxt(''); setShowForm(s => !s); }}
-          className="px-4 py-2 rounded-lg text-white font-semibold text-sm"
-          style={{ background: 'var(--brand-primary)' }}
-        >
-          {showForm ? '✕ Fechar' : '+ Novo item'}
-        </button>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => { setShowImport(true); setTextoImport(''); setParsedItens([]); }}
+            className="px-4 py-2 rounded-lg border-2 font-semibold text-sm"
+            style={{ borderColor: 'var(--brand-primary)', color: 'var(--brand-primary)' }}
+          >
+            📥 Importar Lista
+          </button>
+          <button
+            onClick={() => { setEditandoId(null); setForm(empty()); setValorFornecedorTxt(''); setLucroFixoTxt(''); setShowForm(s => !s); }}
+            className="px-4 py-2 rounded-lg text-white font-semibold text-sm"
+            style={{ background: 'var(--brand-primary)' }}
+          >
+            {showForm ? '✕ Fechar' : '+ Novo item'}
+          </button>
+        </div>
       </div>
 
       {/* Formulário */}
@@ -200,7 +416,6 @@ export default function ListaFornecedorPage() {
             </div>
           </div>
 
-          {/* Cores multi-select */}
           <div>
             <label className="label">Cores disponíveis <span className="text-gray-400 text-xs font-normal">(selecione uma ou mais)</span></label>
             <div className="flex flex-wrap gap-2">
@@ -212,9 +427,7 @@ export default function ListaFornecedorPage() {
                     type="button"
                     onClick={() => toggleCor(c)}
                     className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 transition-colors ${
-                      sel
-                        ? 'border-blue-600 bg-blue-50 text-blue-700'
-                        : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                      sel ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-400'
                     }`}
                     style={sel ? {} : { background: corSuave(c) }}
                   >
@@ -225,7 +438,6 @@ export default function ListaFornecedorPage() {
             </div>
           </div>
 
-          {/* Baterias multi-select */}
           <div>
             <label className="label">% de Bateria <span className="text-gray-400 text-xs font-normal">(selecione ou adicione)</span></label>
             <div className="flex flex-wrap gap-2 mb-2">
@@ -245,10 +457,7 @@ export default function ListaFornecedorPage() {
                 );
               })}
               {form.baterias.filter(b => !BATERIAS_SUGERIDAS.includes(b)).map(b => (
-                <span
-                  key={b}
-                  className="px-3 py-1.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 border-2 border-green-600 flex items-center gap-1"
-                >
+                <span key={b} className="px-3 py-1.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 border-2 border-green-600 flex items-center gap-1">
                   ✓ 🔋 {b}
                   <button type="button" onClick={() => toggleBateria(b)} className="ml-1 text-green-700 hover:text-red-600">✕</button>
                 </span>
@@ -275,7 +484,6 @@ export default function ListaFornecedorPage() {
             </div>
           </div>
 
-          {/* Valor do Fornecedor */}
           <div>
             <label className="label">Valor cobrado pelo Fornecedor (R$)</label>
             <input
@@ -293,7 +501,6 @@ export default function ListaFornecedorPage() {
             <p className="text-[10px] text-gray-400 mt-1">Base sobre a qual o lucro será calculado.</p>
           </div>
 
-          {/* Tipo de lucro */}
           <div>
             <label className="label">Lucro Desejado</label>
             <div className="flex gap-2 mb-2">
@@ -301,9 +508,7 @@ export default function ListaFornecedorPage() {
                 type="button"
                 onClick={() => set('tipoLucro', 'percentual')}
                 className={`flex-1 py-2 rounded-lg text-sm font-bold border-2 ${
-                  form.tipoLucro === 'percentual'
-                    ? 'border-blue-600 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 text-gray-500 hover:border-gray-400'
+                  form.tipoLucro === 'percentual' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:border-gray-400'
                 }`}
               >
                 % Percentual
@@ -312,9 +517,7 @@ export default function ListaFornecedorPage() {
                 type="button"
                 onClick={() => set('tipoLucro', 'fixo')}
                 className={`flex-1 py-2 rounded-lg text-sm font-bold border-2 ${
-                  form.tipoLucro === 'fixo'
-                    ? 'border-blue-600 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 text-gray-500 hover:border-gray-400'
+                  form.tipoLucro === 'fixo' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500 hover:border-gray-400'
                 }`}
               >
                 R$ Valor fixo
@@ -345,7 +548,6 @@ export default function ListaFornecedorPage() {
               />
             )}
 
-            {/* Resumo do cálculo */}
             {form.valorFornecedor > 0 && form.margemLucro > 0 && (
               <div className="mt-2 p-3 rounded-lg bg-green-50 border border-green-200 text-sm">
                 <div className="flex justify-between text-gray-600">
@@ -353,20 +555,34 @@ export default function ListaFornecedorPage() {
                   <span className="font-semibold">{fmtMoeda(form.valorFornecedor)}</span>
                 </div>
                 <div className="flex justify-between text-green-700">
-                  <span>
-                    + Lucro {form.tipoLucro === 'percentual' ? `(${form.margemLucro}%)` : '(fixo)'}
-                  </span>
-                  <span className="font-semibold">
-                    +{fmtMoeda(calcularLucro(form.valorFornecedor, form.tipoLucro, form.margemLucro))}
-                  </span>
+                  <span>+ Lucro {form.tipoLucro === 'percentual' ? `(${form.margemLucro}%)` : '(fixo)'}</span>
+                  <span className="font-semibold">+{fmtMoeda(calcularLucro(form.valorFornecedor, form.tipoLucro, form.margemLucro))}</span>
                 </div>
                 <div className="flex justify-between text-gray-800 font-bold pt-1 border-t border-green-300 mt-1">
                   <span>Preço de venda sugerido</span>
-                  <span>
-                    {fmtMoeda(form.valorFornecedor + calcularLucro(form.valorFornecedor, form.tipoLucro, form.margemLucro))}
-                  </span>
+                  <span>{fmtMoeda(form.valorFornecedor + calcularLucro(form.valorFornecedor, form.tipoLucro, form.margemLucro))}</span>
                 </div>
               </div>
+            )}
+          </div>
+
+          {/* Fornecedor */}
+          <div>
+            <label className="label">Fornecedor <span className="text-gray-400 text-xs font-normal">(opcional, com WhatsApp para pedido)</span></label>
+            <select
+              className="input"
+              value={form.fornecedorId ?? ''}
+              onChange={e => set('fornecedorId', e.target.value ? Number(e.target.value) : undefined)}
+            >
+              <option value="">— Sem fornecedor vinculado —</option>
+              {fornecedores.map(f => (
+                <option key={f.id} value={f.id}>
+                  {f.nome}{f.telefone ? ` · ${f.telefone}` : ''}
+                </option>
+              ))}
+            </select>
+            {fornecedores.length === 0 && (
+              <p className="text-[10px] text-gray-400 mt-1">Cadastre fornecedores em Fornecedores no menu.</p>
             )}
           </div>
 
@@ -409,9 +625,7 @@ export default function ListaFornecedorPage() {
           <button
             onClick={() => setFiltroAparelho('')}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
-              filtroAparelho === ''
-                ? 'bg-gray-800 text-white'
-                : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+              filtroAparelho === '' ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
             }`}
           >
             Todos ({itens.length})
@@ -421,9 +635,7 @@ export default function ListaFornecedorPage() {
               key={a}
               onClick={() => setFiltroAparelho(a)}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
-                filtroAparelho === a
-                  ? 'bg-gray-800 text-white'
-                  : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                filtroAparelho === a ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
               }`}
             >
               {a}
@@ -438,98 +650,269 @@ export default function ListaFornecedorPage() {
           <div className="text-5xl mb-3">📋</div>
           <p className="text-lg font-bold text-gray-700">Lista vazia</p>
           <p className="text-sm text-gray-500 mt-1">
-            Adicione os aparelhos disponíveis no seu fornecedor para gerenciá-los aqui.
+            Adicione manualmente ou cole uma lista pronta no botão "Importar Lista".
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {itensFiltrados.map(item => (
-            <div key={item.id} className="bg-white rounded-2xl shadow p-4 space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="font-extrabold text-gray-800 truncate">
-                    {item.aparelho} <span className="font-normal text-gray-500">{item.linha}</span>
-                  </p>
-                  <p className="text-sm text-gray-500">{item.capacidade}</p>
-                </div>
-                <span
-                  className="px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0"
-                  style={{ background: 'var(--brand-primary-light)', color: 'var(--brand-primary-dark)' }}
-                >
-                  {item.tipoLucro === 'fixo' ? `+${fmtMoeda(item.margemLucro)}` : `+${item.margemLucro}%`}
-                </span>
-              </div>
-
-              {/* Valores */}
-              {item.valorFornecedor > 0 && (
-                <div className="bg-gray-50 rounded-lg p-2.5 text-xs space-y-1">
-                  <div className="flex justify-between text-gray-500">
-                    <span>Custo fornecedor</span>
-                    <span className="font-semibold">{fmtMoeda(item.valorFornecedor)}</span>
+          {itensFiltrados.map(item => {
+            const fornecedor = fornecedorDoItem(item);
+            return (
+              <div key={item.id} className="bg-white rounded-2xl shadow p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-extrabold text-gray-800 truncate">
+                      {item.aparelho} <span className="font-normal text-gray-500">{item.linha}</span>
+                    </p>
+                    <p className="text-sm text-gray-500">{item.capacidade}</p>
                   </div>
-                  <div className="flex justify-between text-green-700">
-                    <span>+ Lucro</span>
-                    <span className="font-semibold">
-                      +{fmtMoeda(calcularLucro(item.valorFornecedor, item.tipoLucro, item.margemLucro))}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-gray-800 font-bold pt-1 border-t border-gray-200">
-                    <span>Preço sugerido</span>
-                    <span>
-                      {fmtMoeda(item.valorFornecedor + calcularLucro(item.valorFornecedor, item.tipoLucro, item.margemLucro))}
-                    </span>
-                  </div>
+                  <span
+                    className="px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0"
+                    style={{ background: 'var(--brand-primary-light)', color: 'var(--brand-primary-dark)' }}
+                  >
+                    {item.tipoLucro === 'fixo' ? `+${fmtMoeda(item.margemLucro)}` : `+${item.margemLucro}%`}
+                  </span>
                 </div>
-              )}
 
-              <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Cores</p>
-                <div className="flex flex-wrap gap-1">
-                  {item.cores.map(c => (
-                    <span
-                      key={c}
-                      className="px-2 py-0.5 rounded-full text-[11px] font-semibold border border-gray-200"
-                      style={{ background: corSuave(c) }}
-                    >
-                      {c}
-                    </span>
-                  ))}
-                </div>
-              </div>
+                {/* Fornecedor */}
+                {fornecedor && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5 flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-orange-700 uppercase tracking-wide font-semibold">Fornecedor</p>
+                      <p className="text-sm font-bold text-gray-800 truncate">🚚 {fornecedor.nome}</p>
+                      {fornecedor.telefone && (
+                        <p className="text-[11px] text-gray-500 truncate">{fornecedor.telefone}</p>
+                      )}
+                    </div>
+                    {fornecedor.telefone && (
+                      <button
+                        onClick={() => enviarWhatsAppFornecedor(item)}
+                        className="flex-shrink-0 px-3 py-1.5 rounded-lg text-white text-xs font-bold flex items-center gap-1"
+                        style={{ background: '#25D366' }}
+                        title="Pedir pelo WhatsApp"
+                      >
+                        💬 Pedir
+                      </button>
+                    )}
+                  </div>
+                )}
 
-              {item.baterias.length > 0 && (
+                {/* Valores */}
+                {item.valorFornecedor > 0 && (
+                  <div className="bg-gray-50 rounded-lg p-2.5 text-xs space-y-1">
+                    <div className="flex justify-between text-gray-500">
+                      <span>Custo fornecedor</span>
+                      <span className="font-semibold">{fmtMoeda(item.valorFornecedor)}</span>
+                    </div>
+                    <div className="flex justify-between text-green-700">
+                      <span>+ Lucro</span>
+                      <span className="font-semibold">+{fmtMoeda(calcularLucro(item.valorFornecedor, item.tipoLucro, item.margemLucro))}</span>
+                    </div>
+                    <div className="flex justify-between text-gray-800 font-bold pt-1 border-t border-gray-200">
+                      <span>Preço sugerido</span>
+                      <span>{fmtMoeda(item.valorFornecedor + calcularLucro(item.valorFornecedor, item.tipoLucro, item.margemLucro))}</span>
+                    </div>
+                  </div>
+                )}
+
                 <div>
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Bateria</p>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Cores</p>
                   <div className="flex flex-wrap gap-1">
-                    {item.baterias.map(b => (
-                      <span key={b} className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-50 text-green-700 border border-green-200">
-                        🔋 {b}
-                      </span>
+                    {item.cores.map(c => (
+                      <span key={c} className="px-2 py-0.5 rounded-full text-[11px] font-semibold border border-gray-200" style={{ background: corSuave(c) }}>{c}</span>
+                    ))}
+                  </div>
+                </div>
+
+                {item.baterias.length > 0 && (
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Bateria</p>
+                    <div className="flex flex-wrap gap-1">
+                      {item.baterias.map(b => (
+                        <span key={b} className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-50 text-green-700 border border-green-200">🔋 {b}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {item.observacao && <p className="text-xs text-gray-500 italic">📝 {item.observacao}</p>}
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => handleEdit(item)}
+                    className="flex-1 py-1.5 text-xs bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-700 font-semibold"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="flex-1 py-1.5 text-xs bg-red-50 hover:bg-red-100 rounded-lg text-red-600 font-semibold"
+                  >
+                    Excluir
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Modal Importar Lista */}
+      {showImport && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3"
+          onClick={() => setShowImport(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="sticky top-0 bg-white border-b border-gray-100 px-5 py-4 z-10 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">📥 Importar Lista do Fornecedor</h2>
+                <p className="text-xs text-gray-500">Cole a lista (uma linha por aparelho) e o sistema cadastra tudo de uma vez.</p>
+              </div>
+              <button onClick={() => setShowImport(false)} className="text-gray-400 hover:text-gray-700 text-xl">✕</button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="label">Cole a lista aqui</label>
+                <textarea
+                  rows={6}
+                  className="input font-mono text-xs"
+                  value={textoImport}
+                  onChange={e => setTextoImport(e.target.value)}
+                  placeholder={'Exemplo:\niPhone 14 Pro Max 256gb - preto, branco - 100% - R$ 5500\niPhone 14 Pro 128gb - azul - 95% - 4800\niPhone 13 256GB - dourado - R$ 3200'}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="label">Lucro padrão a aplicar</label>
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setImportTipoLucro('percentual')}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold border-2 ${
+                        importTipoLucro === 'percentual' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500'
+                      }`}
+                    >
+                      % Percentual
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImportTipoLucro('fixo')}
+                      className={`flex-1 py-1.5 rounded-lg text-xs font-bold border-2 ${
+                        importTipoLucro === 'fixo' ? 'border-blue-600 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-500'
+                      }`}
+                    >
+                      R$ Fixo
+                    </button>
+                  </div>
+                  {importTipoLucro === 'percentual' ? (
+                    <input
+                      type="number"
+                      step="0.5"
+                      className="input"
+                      value={importMargem}
+                      onChange={e => setImportMargem(Number(e.target.value))}
+                      placeholder="15"
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className="input"
+                      value={importMargemFixoTxt}
+                      placeholder="R$ 0,00"
+                      onChange={e => setImportMargemFixoTxt(mascaraMoedaDigitada(e.target.value))}
+                    />
+                  )}
+                </div>
+
+                <div>
+                  <label className="label">Fornecedor a vincular <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
+                  <select
+                    className="input"
+                    value={importFornecedorId}
+                    onChange={e => setImportFornecedorId(e.target.value ? Number(e.target.value) : '')}
+                  >
+                    <option value="">— Nenhum —</option>
+                    {fornecedores.map(f => (
+                      <option key={f.id} value={f.id}>{f.nome}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={analisar}
+                  className="flex-1 py-2 rounded-lg font-semibold text-sm border-2"
+                  style={{ borderColor: 'var(--brand-primary)', color: 'var(--brand-primary)' }}
+                >
+                  🔍 Analisar lista
+                </button>
+                <button
+                  type="button"
+                  onClick={importarTudo}
+                  disabled={parsedItens.filter(p => p.ok).length === 0 || importando}
+                  className="flex-1 py-2 rounded-lg font-bold text-sm text-white disabled:opacity-50"
+                  style={{ background: 'var(--brand-primary)' }}
+                >
+                  {importando ? 'Importando...' : `✓ Importar ${parsedItens.filter(p => p.ok).length} itens`}
+                </button>
+              </div>
+
+              {/* Pré-visualização */}
+              {parsedItens.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-gray-600">Itens detectados ({parsedItens.filter(p => p.ok).length} de {parsedItens.length}):</p>
+                  <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                    {parsedItens.map((p, idx) => (
+                      <div
+                        key={idx}
+                        className={`text-xs p-2.5 rounded-lg border flex items-start justify-between gap-2 ${
+                          p.ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          {p.ok ? (
+                            <>
+                              <p className="font-bold text-gray-800">
+                                ✓ {p.aparelho} {p.linha} {p.capacidade}
+                                {p.valorFornecedor > 0 && (
+                                  <span className="ml-2 text-green-700">{fmtMoeda(p.valorFornecedor)}</span>
+                                )}
+                              </p>
+                              <p className="text-[11px] text-gray-500 truncate">
+                                {p.cores.length ? `Cores: ${p.cores.join(', ')}` : 'Sem cor (assumirá PRETO)'}
+                                {p.baterias.length ? ` · 🔋 ${p.baterias.join(', ')}` : ''}
+                              </p>
+                              <p className="text-[10px] text-gray-400 truncate italic">{p.raw}</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="font-bold text-red-700">✕ {p.motivo}</p>
+                              <p className="text-[10px] text-gray-500 truncate italic">{p.raw}</p>
+                            </>
+                          )}
+                        </div>
+                        <button
+                          onClick={() => removerParseado(idx)}
+                          className="text-gray-400 hover:text-red-600 text-xs flex-shrink-0"
+                        >
+                          ✕
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
-
-              {item.observacao && (
-                <p className="text-xs text-gray-500 italic">📝 {item.observacao}</p>
-              )}
-
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={() => handleEdit(item)}
-                  className="flex-1 py-1.5 text-xs bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-700 font-semibold"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  className="flex-1 py-1.5 text-xs bg-red-50 hover:bg-red-100 rounded-lg text-red-600 font-semibold"
-                >
-                  Excluir
-                </button>
-              </div>
             </div>
-          ))}
+          </div>
         </div>
       )}
     </div>
