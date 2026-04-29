@@ -654,12 +654,12 @@ export default function ListaFornecedorPage({ tipo = 'SEMINOVO' }: ListaForneced
 
     const linhasMsg = [
       `Olá, ${f.nome}!`,
-      `Tenho interesse no produto:`,
+      `Tenho interesse no produto${ehNovo ? ' lacrado' : ''}:`,
       ``,
-      `📱 *${grupo.aparelho} ${grupo.linha}*`,
+      `📱 *${grupo.aparelho} ${grupo.linha}*${ehNovo ? ' (NOVO/LACRADO)' : ''}`,
       capacidades.length ? `Capacidade: ${ordenarCapacidades(capacidades).join(', ')}` : '',
       cores.length ? `${corSel ? 'Cor' : 'Cores'}: ${cores.join(', ')}` : '',
-      baterias.length ? `🔋 Bateria: ${baterias.join(', ')}` : '',
+      !ehNovo && baterias.length ? `🔋 Bateria: ${baterias.join(', ')}` : '',
     ];
 
     // Se for específico (cap+cor) mostramos preço unitário; senão faixa
@@ -787,51 +787,53 @@ export default function ListaFornecedorPage({ tipo = 'SEMINOVO' }: ListaForneced
             </div>
           </div>
 
-          <div>
-            <label className="label">% de Bateria <span className="text-gray-400 text-xs font-normal">(selecione ou adicione)</span></label>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {BATERIAS_SUGERIDAS.map(b => {
-                const sel = form.baterias.includes(b);
-                return (
-                  <button
-                    key={b}
-                    type="button"
-                    onClick={() => toggleBateria(b)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 ${
-                      sel ? 'border-green-600 bg-green-50 text-green-700' : 'border-gray-200 text-gray-600 hover:border-gray-400'
-                    }`}
-                  >
-                    {sel && '✓ '}🔋 {b}
-                  </button>
-                );
-              })}
-              {form.baterias.filter(b => !BATERIAS_SUGERIDAS.includes(b)).map(b => (
-                <span key={b} className="px-3 py-1.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 border-2 border-green-600 flex items-center gap-1">
-                  ✓ 🔋 {b}
-                  <button type="button" onClick={() => toggleBateria(b)} className="ml-1 text-green-700 hover:text-red-600">✕</button>
-                </span>
-              ))}
+          {!ehNovo && (
+            <div>
+              <label className="label">% de Bateria <span className="text-gray-400 text-xs font-normal">(selecione ou adicione)</span></label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {BATERIAS_SUGERIDAS.map(b => {
+                  const sel = form.baterias.includes(b);
+                  return (
+                    <button
+                      key={b}
+                      type="button"
+                      onClick={() => toggleBateria(b)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border-2 ${
+                        sel ? 'border-green-600 bg-green-50 text-green-700' : 'border-gray-200 text-gray-600 hover:border-gray-400'
+                      }`}
+                    >
+                      {sel && '✓ '}🔋 {b}
+                    </button>
+                  );
+                })}
+                {form.baterias.filter(b => !BATERIAS_SUGERIDAS.includes(b)).map(b => (
+                  <span key={b} className="px-3 py-1.5 rounded-full text-xs font-semibold bg-green-50 text-green-700 border-2 border-green-600 flex items-center gap-1">
+                    ✓ 🔋 {b}
+                    <button type="button" onClick={() => toggleBateria(b)} className="ml-1 text-green-700 hover:text-red-600">✕</button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={bateriaInput}
+                  onChange={e => setBateriaInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addBateriaCustom(); } }}
+                  placeholder="Outra %, ex: 87"
+                  className="input !w-auto text-sm"
+                  maxLength={3}
+                />
+                <button
+                  type="button"
+                  onClick={addBateriaCustom}
+                  className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  Adicionar %
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                inputMode="numeric"
-                value={bateriaInput}
-                onChange={e => setBateriaInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addBateriaCustom(); } }}
-                placeholder="Outra %, ex: 87"
-                className="input !w-auto text-sm"
-                maxLength={3}
-              />
-              <button
-                type="button"
-                onClick={addBateriaCustom}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50"
-              >
-                Adicionar %
-              </button>
-            </div>
-          </div>
+          )}
 
           <div>
             <label className="label">Valor cobrado pelo Fornecedor (R$)</label>
@@ -1230,8 +1232,8 @@ export default function ListaFornecedorPage({ tipo = 'SEMINOVO' }: ListaForneced
                   </div>
                 )}
 
-                {/* Baterias — filtradas pelos dois seletores */}
-                {bateriasVisiveis.length > 0 && (
+                {/* Baterias — filtradas pelos dois seletores (oculto para NOVOS) */}
+                {!ehNovo && bateriasVisiveis.length > 0 && (
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
                       Bateria
@@ -1427,7 +1429,7 @@ export default function ListaFornecedorPage({ tipo = 'SEMINOVO' }: ListaForneced
                               <span className="text-gray-700">
                                 {p.cores.length ? p.cores.join(', ') : '⚠ sem cor'}
                               </span>
-                              {p.baterias.length > 0 && (
+                              {!ehNovo && p.baterias.length > 0 && (
                                 <span className="text-gray-500"> · 🔋 {p.baterias.join(' ')}</span>
                               )}
                               {p.valorFornecedor > 0 && (
