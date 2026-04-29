@@ -55,8 +55,8 @@ interface GrupoItens {
   chave: string;
   aparelho: string;
   linha: string;
-  capacidade: string;
   itens: ItemListaFornecedor[];
+  capacidades: string[];
   cores: string[];
   baterias: string[]; // união de todas
   precoMin: number;
@@ -67,18 +67,30 @@ const ORDEM_LINHA: Record<string, number> = {
   'PRO MAX': 1, 'PRO': 2, 'PLUS': 3, 'AIR': 4, 'NORMAL': 5, 'MINI': 6, 'SE': 7,
 };
 
+// Converte "1 TB" / "256 GB" para um número comparável
+function capacidadeEmGB(cap: string): number {
+  const m = cap.match(/(\d+)\s*(GB|TB)/i);
+  if (!m) return 0;
+  const n = parseInt(m[1]);
+  return m[2].toUpperCase() === 'TB' ? n * 1024 : n;
+}
+
+function ordenarCapacidades(caps: string[]): string[] {
+  return [...caps].sort((a, b) => capacidadeEmGB(a) - capacidadeEmGB(b));
+}
+
 function agruparItens(itens: ItemListaFornecedor[]): GrupoItens[] {
   const map = new Map<string, GrupoItens>();
   for (const item of itens) {
-    const chave = `${item.aparelho}|${item.linha}|${item.capacidade}`;
+    const chave = `${item.aparelho}|${item.linha}`;
     let g = map.get(chave);
     if (!g) {
       g = {
         chave,
         aparelho: item.aparelho,
         linha: item.linha,
-        capacidade: item.capacidade,
         itens: [],
+        capacidades: [],
         cores: [],
         baterias: [],
         precoMin: Infinity,
@@ -87,6 +99,7 @@ function agruparItens(itens: ItemListaFornecedor[]): GrupoItens[] {
       map.set(chave, g);
     }
     g.itens.push(item);
+    if (!g.capacidades.includes(item.capacidade)) g.capacidades.push(item.capacidade);
     item.cores.forEach(c => { if (!g!.cores.includes(c)) g!.cores.push(c); });
     item.baterias.forEach(b => { if (!g!.baterias.includes(b)) g!.baterias.push(b); });
     if (item.valorFornecedor > 0) {
@@ -94,14 +107,15 @@ function agruparItens(itens: ItemListaFornecedor[]): GrupoItens[] {
       g.precoMax = Math.max(g.precoMax, item.valorFornecedor);
     }
   }
+  // Ordena as capacidades dentro de cada grupo
+  for (const g of map.values()) {
+    g.capacidades = ordenarCapacidades(g.capacidades);
+  }
   return Array.from(map.values()).sort((a, b) => {
     const na = parseInt(a.aparelho.replace(/\D/g, '')) || 0;
     const nb = parseInt(b.aparelho.replace(/\D/g, '')) || 0;
     if (na !== nb) return nb - na; // 17 antes do 11
-    if (a.linha !== b.linha) return (ORDEM_LINHA[a.linha] ?? 99) - (ORDEM_LINHA[b.linha] ?? 99);
-    const ca = parseInt(a.capacidade) || 0;
-    const cb = parseInt(b.capacidade) || 0;
-    return ca - cb;
+    return (ORDEM_LINHA[a.linha] ?? 99) - (ORDEM_LINHA[b.linha] ?? 99);
   });
 }
 
@@ -348,12 +362,19 @@ export default function ListaFornecedorPage() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const [filtroAparelho, setFiltroAparelho] = useState('');
+  const [filtroFornecedorId, setFiltroFornecedorId] = useState<number | null>(null);
   const [compilacaoAt, setCompilacaoAt] = useState<string | null>(null);
-  // Cor selecionada por grupo (para filtrar baterias dentro do card)
+  // Cor e capacidade selecionadas por grupo (para filtrar dentro do card)
   const [coresSelecionadas, setCoresSelecionadas] = useState<Record<string, string | null>>({});
+  const [capacidadesSelecionadas, setCapacidadesSelecionadas] = useState<Record<string, string | null>>({});
 
   const selecionarCor = (chave: string, cor: string | null) => {
     setCoresSelecionadas(prev => ({ ...prev, [chave]: cor }));
+  };
+  const selecionarCapacidade = (chave: string, cap: string | null) => {
+    setCapacidadesSelecionadas(prev => ({ ...prev, [chave]: cap }));
+    // Ao mudar de capacidade, limpa a cor selecionada (cores podem variar)
+    setCoresSelecionadas(prev => ({ ...prev, [chave]: null }));
   };
 
   // Importador
@@ -515,10 +536,24 @@ export default function ListaFornecedorPage() {
     }
   };
 
-  const itensFiltrados = filtroAparelho
-    ? itens.filter(i => i.aparelho === filtroAparelho)
+  const itensFiltrados = itens.filter(i =>
+    (!filtroAparelho || i.aparelho === filtroAparelho) &&
+    (!filtroFornecedorId || i.fornecedorId === filtroFornecedorId),
+  );
+  // Aparelhos disponíveis dependem do filtro de fornecedor (para não mostrar opções vazias)
+  const itensParaAparelhos = filtroFornecedorId
+    ? itens.filter(i => i.fornecedorId === filtroFornecedorId)
     : itens;
-  const aparelhosDisponiveis = Array.from(new Set(itens.map(i => i.aparelho)));
+  const aparelhosDisponiveis = Array.from(new Set(itensParaAparelhos.map(i => i.aparelho)));
+  // Fornecedores que aparecem em pelo menos um item da lista (para botões de filtro)
+  const fornecedoresEmUso = Array.from(
+    new Map(
+      itens
+        .filter(i => i.fornecedorId)
+        .map(i => [i.fornecedorId!, fornecedores.find(f => f.id === i.fornecedorId)])
+        .filter((entry): entry is [number, Fornecedor] => entry[1] !== undefined),
+    ).values(),
+  );
   const grupos = agruparItens(itensFiltrados);
 
   // Helpers
@@ -545,48 +580,85 @@ export default function ListaFornecedorPage() {
     window.open(whatsappUrl(f.telefone, texto), '_blank');
   };
 
-  // WhatsApp baseado no grupo (com cor selecionada ou geral)
-  const enviarWhatsAppGrupo = (grupo: GrupoItens, corSelecionada: string | null) => {
-    const item = corSelecionada
-      ? grupo.itens.find(it => it.cores.includes(corSelecionada)) ?? grupo.itens[0]
-      : grupo.itens[0];
+  // Filtra os itens do grupo conforme capacidade/cor selecionadas
+  const filtrarItens = (
+    grupo: GrupoItens,
+    capSel: string | null,
+    corSel: string | null,
+  ): ItemListaFornecedor[] => {
+    return grupo.itens.filter(it =>
+      (!capSel || it.capacidade === capSel) &&
+      (!corSel || it.cores.includes(corSel)),
+    );
+  };
+
+  // WhatsApp baseado no grupo + filtros
+  const enviarWhatsAppGrupo = (
+    grupo: GrupoItens,
+    capSel: string | null,
+    corSel: string | null,
+  ) => {
+    const visiveis = filtrarItens(grupo, capSel, corSel);
+    const item = visiveis[0] ?? grupo.itens[0];
 
     const f = fornecedorDoItem(item);
     if (!f || !f.telefone) {
       alert('Este item não tem fornecedor com telefone cadastrado.');
       return;
     }
+    const baterias = ordenarBaterias(Array.from(new Set(visiveis.flatMap(it => it.baterias))));
+    const cores = corSel ? [corSel] : Array.from(new Set(visiveis.flatMap(it => it.cores)));
+    const capacidades = capSel ? [capSel] : Array.from(new Set(visiveis.map(it => it.capacidade)));
     const total = item.valorFornecedor + calcularLucro(item.valorFornecedor, item.tipoLucro, item.margemLucro);
-    const baterias = corSelecionada ? item.baterias : grupo.baterias;
-    const cores = corSelecionada ? [corSelecionada] : grupo.cores;
-    const texto = [
+
+    const linhasMsg = [
       `Olá, ${f.nome}!`,
       `Tenho interesse no produto:`,
       ``,
-      `📱 *${grupo.aparelho} ${grupo.linha}* — ${grupo.capacidade}`,
-      cores.length ? `${corSelecionada ? 'Cor' : 'Cores disponíveis'}: ${cores.join(', ')}` : '',
-      baterias.length ? `🔋 Bateria: ${ordenarBaterias(baterias).join(', ')}` : '',
-      item.valorFornecedor > 0 ? `\nValor: ${fmtMoeda(item.valorFornecedor)}` : '',
-      item.valorFornecedor > 0 ? `Preço sugerido de venda: ${fmtMoeda(total)}` : '',
-    ].filter(Boolean).join('\n');
+      `📱 *${grupo.aparelho} ${grupo.linha}*`,
+      capacidades.length ? `Capacidade: ${ordenarCapacidades(capacidades).join(', ')}` : '',
+      cores.length ? `${corSel ? 'Cor' : 'Cores'}: ${cores.join(', ')}` : '',
+      baterias.length ? `🔋 Bateria: ${baterias.join(', ')}` : '',
+    ];
+
+    // Se for específico (cap+cor) mostramos preço unitário; senão faixa
+    if (capSel && corSel && item.valorFornecedor > 0) {
+      linhasMsg.push(``, `Valor: ${fmtMoeda(item.valorFornecedor)}`, `Preço sugerido de venda: ${fmtMoeda(total)}`);
+    } else if (visiveis.length > 0) {
+      const valores = visiveis.map(it => it.valorFornecedor).filter(v => v > 0);
+      if (valores.length > 0) {
+        const min = Math.min(...valores);
+        const max = Math.max(...valores);
+        linhasMsg.push(``, min === max ? `Valor: ${fmtMoeda(min)}` : `Faixa de valor: ${fmtMoeda(min)} – ${fmtMoeda(max)}`);
+      }
+    }
+
+    const texto = linhasMsg.filter(Boolean).join('\n');
     window.open(whatsappUrl(f.telefone, texto), '_blank');
   };
 
-  // Excluir baseado no grupo (cor específica ou todas)
-  const handleDeleteGrupo = async (grupo: GrupoItens, corSelecionada: string | null) => {
-    if (corSelecionada) {
-      const item = grupo.itens.find(it => it.cores.includes(corSelecionada));
-      if (!item) return;
-      if (!confirm(`Remover apenas a cor ${corSelecionada} de "${grupo.aparelho} ${grupo.linha} ${grupo.capacidade}"?`)) return;
+  // Excluir baseado no grupo (capacidade+cor específicas ou em massa)
+  const handleDeleteGrupo = async (
+    grupo: GrupoItens,
+    capSel: string | null,
+    corSel: string | null,
+  ) => {
+    const alvos = filtrarItens(grupo, capSel, corSel);
+    if (alvos.length === 0) return;
+
+    let descricao = `${grupo.aparelho} ${grupo.linha}`;
+    if (capSel) descricao += ` ${capSel}`;
+    if (corSel) descricao += ` (${corSel})`;
+    const msg = alvos.length === grupo.itens.length
+      ? `Remover TODAS as ${grupo.itens.length} variações de "${descricao}"?`
+      : `Remover ${alvos.length} variação(ões) de "${descricao}"?`;
+
+    if (!confirm(msg)) return;
+    for (const item of alvos) {
       await deleteItemListaFornecedor(item.id);
-    } else {
-      const n = grupo.itens.length;
-      if (!confirm(`Remover TODAS as ${n} variações de "${grupo.aparelho} ${grupo.linha} ${grupo.capacidade}"?`)) return;
-      for (const item of grupo.itens) {
-        await deleteItemListaFornecedor(item.id);
-      }
     }
     selecionarCor(grupo.chave, null);
+    selecionarCapacidade(grupo.chave, null);
     await load();
   };
 
@@ -857,28 +929,77 @@ export default function ListaFornecedorPage() {
         </form>
       )}
 
-      {/* Filtro */}
+      {/* Filtros */}
       {itens.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setFiltroAparelho('')}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
-              filtroAparelho === '' ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            Todos ({itens.length})
-          </button>
-          {aparelhosDisponiveis.map(a => (
-            <button
-              key={a}
-              onClick={() => setFiltroAparelho(a)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
-                filtroAparelho === a ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              {a}
-            </button>
-          ))}
+        <div className="space-y-2">
+          {/* Filtro de Fornecedor */}
+          {fornecedoresEmUso.length > 0 && (
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-semibold">
+                🚚 Fornecedor
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => { setFiltroFornecedorId(null); setFiltroAparelho(''); }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                    filtroFornecedorId === null
+                      ? 'bg-orange-600 text-white'
+                      : 'bg-white border border-orange-200 text-orange-700 hover:bg-orange-50'
+                  }`}
+                >
+                  Todos ({itens.length})
+                </button>
+                {fornecedoresEmUso.map(f => {
+                  const total = itens.filter(i => i.fornecedorId === f.id).length;
+                  const sel = filtroFornecedorId === f.id;
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => { setFiltroFornecedorId(f.id); setFiltroAparelho(''); }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                        sel
+                          ? 'bg-orange-600 text-white'
+                          : 'bg-white border border-orange-200 text-orange-700 hover:bg-orange-50'
+                      }`}
+                    >
+                      {f.nome} ({total})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Filtro de Aparelho */}
+          <div>
+            <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1 font-semibold">
+              📱 Aparelho
+            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setFiltroAparelho('')}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                  filtroAparelho === '' ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Todos ({itensParaAparelhos.length})
+              </button>
+              {aparelhosDisponiveis.map(a => {
+                const total = itensParaAparelhos.filter(i => i.aparelho === a).length;
+                return (
+                  <button
+                    key={a}
+                    onClick={() => setFiltroAparelho(a)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                      filtroAparelho === a ? 'bg-gray-800 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {a} ({total})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -894,10 +1015,18 @@ export default function ListaFornecedorPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {grupos.map(grupo => {
-            const corSelecionada = coresSelecionadas[grupo.chave] ?? null;
-            const itensVisiveis = corSelecionada
-              ? grupo.itens.filter(it => it.cores.includes(corSelecionada))
+            const capSel = capacidadesSelecionadas[grupo.chave] ?? null;
+            const corSel = coresSelecionadas[grupo.chave] ?? null;
+            const itensFiltradosCap = capSel
+              ? grupo.itens.filter(it => it.capacidade === capSel)
               : grupo.itens;
+            const itensVisiveis = corSel
+              ? itensFiltradosCap.filter(it => it.cores.includes(corSel))
+              : itensFiltradosCap;
+            // Cores que aparecem após filtro de capacidade
+            const coresDisponiveis = Array.from(
+              new Set(itensFiltradosCap.flatMap(it => it.cores)),
+            );
             const bateriasVisiveis = ordenarBaterias(
               Array.from(new Set(itensVisiveis.flatMap(it => it.baterias))),
             );
@@ -910,6 +1039,17 @@ export default function ListaFornecedorPage() {
             const lucroAtivo = calcularLucro(itemAtivo.valorFornecedor, itemAtivo.tipoLucro, itemAtivo.margemLucro);
             const totalAtivo = itemAtivo.valorFornecedor + lucroAtivo;
 
+            // Faixa de preço dos itens visíveis
+            const valoresVisiveis = itensVisiveis.map(it => it.valorFornecedor).filter(v => v > 0);
+            const precoMinVis = valoresVisiveis.length ? Math.min(...valoresVisiveis) : 0;
+            const precoMaxVis = valoresVisiveis.length ? Math.max(...valoresVisiveis) : 0;
+            const filtroCompleto = capSel && corSel; // mostra preço unitário
+            const subtitulo = [
+              capSel ? `${capSel}` : `${grupo.capacidades.length} cap(s)`,
+              `${grupo.cores.length} cor(es)`,
+              `${grupo.itens.length} variação(ões)`,
+            ].join(' · ');
+
             return (
               <div key={grupo.chave} className="bg-white rounded-2xl shadow p-4 space-y-3">
                 {/* Cabeçalho */}
@@ -918,10 +1058,7 @@ export default function ListaFornecedorPage() {
                     <p className="font-extrabold text-gray-800 text-base">
                       {grupo.aparelho} <span className="font-normal text-gray-500">{grupo.linha}</span>
                     </p>
-                    <p className="text-sm text-gray-500">{grupo.capacidade}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">
-                      {grupo.itens.length} variação(ões) · {grupo.cores.length} cor(es)
-                    </p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{subtitulo}</p>
                   </div>
                   <span
                     className="px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0"
@@ -942,13 +1079,13 @@ export default function ListaFornecedorPage() {
                   </div>
                 )}
 
-                {/* Preço — range quando sem cor, exato quando cor selecionada */}
-                {grupo.precoMin !== Infinity && (
+                {/* Preço — exato quando cap+cor; senão faixa */}
+                {valoresVisiveis.length > 0 && (
                   <div className="bg-gray-50 rounded-lg p-2.5 text-xs space-y-1">
-                    {corSelecionada ? (
+                    {filtroCompleto ? (
                       <>
                         <div className="flex justify-between text-gray-500">
-                          <span>Custo {corSelecionada}</span>
+                          <span>Custo {capSel} · {corSel}</span>
                           <span className="font-semibold">{fmtMoeda(itemAtivo.valorFornecedor)}</span>
                         </div>
                         <div className="flex justify-between text-green-700">
@@ -962,58 +1099,100 @@ export default function ListaFornecedorPage() {
                       </>
                     ) : (
                       <div className="flex justify-between text-gray-700">
-                        <span>Faixa de custo</span>
+                        <span>{capSel ? `Custo ${capSel}` : corSel ? `Custo ${corSel}` : 'Faixa de custo'}</span>
                         <span className="font-bold">
-                          {grupo.precoMin === grupo.precoMax
-                            ? fmtMoeda(grupo.precoMin)
-                            : `${fmtMoeda(grupo.precoMin)} – ${fmtMoeda(grupo.precoMax)}`}
+                          {precoMinVis === precoMaxVis
+                            ? fmtMoeda(precoMinVis)
+                            : `${fmtMoeda(precoMinVis)} – ${fmtMoeda(precoMaxVis)}`}
                         </span>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Cores (chips clicáveis para filtrar baterias) */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">
-                      Cores · clique para filtrar baterias
-                    </p>
-                    {corSelecionada && (
-                      <button
-                        onClick={() => selecionarCor(grupo.chave, null)}
-                        className="text-[10px] text-blue-600 hover:underline font-semibold"
-                      >
-                        ✕ Limpar filtro
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {grupo.cores.map(c => {
-                      const sel = c === corSelecionada;
-                      return (
+                {/* Capacidades — chips clicáveis */}
+                {grupo.capacidades.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wider">
+                        Capacidade · clique para filtrar
+                      </p>
+                      {capSel && (
                         <button
-                          key={c}
-                          onClick={() => selecionarCor(grupo.chave, sel ? null : c)}
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border-2 transition-all ${
-                            sel
-                              ? 'border-blue-600 bg-blue-100 text-blue-800 ring-2 ring-blue-200'
-                              : 'border-gray-200 text-gray-700 hover:border-gray-400'
-                          }`}
-                          style={!sel ? { background: corSuave(c) } : {}}
+                          onClick={() => selecionarCapacidade(grupo.chave, null)}
+                          className="text-[10px] text-purple-600 hover:underline font-semibold"
                         >
-                          {sel && '✓ '}{c}
+                          ✕ Limpar
                         </button>
-                      );
-                    })}
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {grupo.capacidades.map(c => {
+                        const sel = c === capSel;
+                        return (
+                          <button
+                            key={c}
+                            onClick={() => selecionarCapacidade(grupo.chave, sel ? null : c)}
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border-2 transition-all ${
+                              sel
+                                ? 'border-purple-600 bg-purple-100 text-purple-800 ring-2 ring-purple-200'
+                                : 'border-gray-200 text-gray-700 hover:border-gray-400 bg-white'
+                            }`}
+                          >
+                            {sel && '✓ '}{c}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Baterias (filtradas pela cor selecionada, se houver) */}
+                {/* Cores — chips clicáveis (filtradas por capacidade selecionada) */}
+                {coresDisponiveis.length > 0 && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wider">
+                        Cores · clique para filtrar baterias
+                      </p>
+                      {corSel && (
+                        <button
+                          onClick={() => selecionarCor(grupo.chave, null)}
+                          className="text-[10px] text-blue-600 hover:underline font-semibold"
+                        >
+                          ✕ Limpar
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {coresDisponiveis.map(c => {
+                        const sel = c === corSel;
+                        return (
+                          <button
+                            key={c}
+                            onClick={() => selecionarCor(grupo.chave, sel ? null : c)}
+                            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border-2 transition-all ${
+                              sel
+                                ? 'border-blue-600 bg-blue-100 text-blue-800 ring-2 ring-blue-200'
+                                : 'border-gray-200 text-gray-700 hover:border-gray-400'
+                            }`}
+                            style={!sel ? { background: corSuave(c) } : {}}
+                          >
+                            {sel && '✓ '}{c}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Baterias — filtradas pelos dois seletores */}
                 {bateriasVisiveis.length > 0 && (
                   <div>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
-                      Bateria{corSelecionada ? ` · ${corSelecionada}` : ' · todas'}
+                      Bateria
+                      {capSel || corSel
+                        ? ` · ${[capSel, corSel].filter(Boolean).join(' · ')}`
+                        : ' · todas'}
                     </p>
                     <div className="flex flex-wrap gap-1">
                       {bateriasVisiveis.map(b => (
@@ -1035,7 +1214,7 @@ export default function ListaFornecedorPage() {
                 {/* Ações: WhatsApp · Editar · Excluir */}
                 <div className="flex gap-2 pt-1">
                   <button
-                    onClick={() => enviarWhatsAppGrupo(grupo, corSelecionada)}
+                    onClick={() => enviarWhatsAppGrupo(grupo, capSel, corSel)}
                     className="flex-1 py-1.5 text-xs rounded-lg font-bold text-white flex items-center justify-center gap-1"
                     style={{ background: '#25D366' }}
                     title="Pedir pelo WhatsApp do fornecedor"
@@ -1049,7 +1228,7 @@ export default function ListaFornecedorPage() {
                     Editar
                   </button>
                   <button
-                    onClick={() => handleDeleteGrupo(grupo, corSelecionada)}
+                    onClick={() => handleDeleteGrupo(grupo, capSel, corSel)}
                     className="px-3 py-1.5 text-xs bg-red-50 hover:bg-red-100 rounded-lg text-red-600 font-semibold"
                   >
                     Excluir
