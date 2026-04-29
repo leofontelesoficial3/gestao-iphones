@@ -60,8 +60,10 @@ export async function getContas(): Promise<ContaInfo[]> {
 }
 
 // ── Lista de Fornecedor (segundo estoque) ─────────────────────
-export async function getListaFornecedor(): Promise<ItemListaFornecedor[]> {
-  const res = await fetch(`/api/lista-fornecedor?conta=${getConta()}`);
+export async function getListaFornecedor(tipo?: 'NOVO' | 'SEMINOVO'): Promise<ItemListaFornecedor[]> {
+  const qs = new URLSearchParams({ conta: getConta() });
+  if (tipo) qs.set('tipo', tipo);
+  const res = await fetch(`/api/lista-fornecedor?${qs.toString()}`);
   if (!res.ok) return [];
   return res.json();
 }

@@ -111,6 +111,8 @@ export async function GET() {
   await sql`ALTER TABLE lista_fornecedor ADD COLUMN IF NOT EXISTS valor_fornecedor DECIMAL(10,2) DEFAULT 0`;
   // Vínculo com cadastro de fornecedor (para botão WhatsApp)
   await sql`ALTER TABLE lista_fornecedor ADD COLUMN IF NOT EXISTS fornecedor_id INTEGER`;
+  // Tipo do produto: 'NOVO' ou 'SEMINOVO' (define em qual aba aparece)
+  await sql`ALTER TABLE lista_fornecedor ADD COLUMN IF NOT EXISTS tipo VARCHAR(20) DEFAULT 'SEMINOVO'`;
 
   // Timestamp da última compilação de lista por importação em massa
   await sql`ALTER TABLE contas ADD COLUMN IF NOT EXISTS lista_compilacao_at TIMESTAMP`;

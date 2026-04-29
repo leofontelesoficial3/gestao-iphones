@@ -14,6 +14,7 @@ interface DbRow {
   fornecedor_id: number | null;
   observacao: string | null;
   updated_at: string | Date | null;
+  tipo: string | null;
 }
 
 function rowToItem(r: DbRow) {
@@ -34,18 +35,28 @@ function rowToItem(r: DbRow) {
     fornecedorId: r.fornecedor_id ? Number(r.fornecedor_id) : undefined,
     observacao: r.observacao || undefined,
     updatedAt,
+    tipo: (r.tipo === 'NOVO' ? 'NOVO' : 'SEMINOVO') as 'NOVO' | 'SEMINOVO',
   };
 }
 
 export async function GET(req: NextRequest) {
   const sql = getDb();
   const conta = req.nextUrl.searchParams.get('conta') || 'default';
-  const rows = await sql`
-    SELECT id, aparelho, linha, capacidade, cores, baterias, margem_lucro, tipo_lucro, valor_fornecedor, fornecedor_id, observacao, updated_at
-    FROM lista_fornecedor
-    WHERE conta = ${conta}
-    ORDER BY id DESC
-  `;
+  const tipoFiltro = req.nextUrl.searchParams.get('tipo');
+
+  const rows = tipoFiltro
+    ? await sql`
+        SELECT id, aparelho, linha, capacidade, cores, baterias, margem_lucro, tipo_lucro, valor_fornecedor, fornecedor_id, observacao, updated_at, tipo
+        FROM lista_fornecedor
+        WHERE conta = ${conta} AND COALESCE(tipo, 'SEMINOVO') = ${tipoFiltro}
+        ORDER BY id DESC
+      `
+    : await sql`
+        SELECT id, aparelho, linha, capacidade, cores, baterias, margem_lucro, tipo_lucro, valor_fornecedor, fornecedor_id, observacao, updated_at, tipo
+        FROM lista_fornecedor
+        WHERE conta = ${conta}
+        ORDER BY id DESC
+      `;
   return NextResponse.json(rows.map(r => rowToItem(r as DbRow)));
 }
 
@@ -59,11 +70,12 @@ export async function POST(req: NextRequest) {
   const tipoLucro = body.tipoLucro === 'fixo' ? 'fixo' : 'percentual';
   const valorFornecedor = Number(body.valorFornecedor) || 0;
   const fornecedorId = body.fornecedorId ? Number(body.fornecedorId) : null;
+  const tipo = body.tipo === 'NOVO' ? 'NOVO' : 'SEMINOVO';
 
   const rows = await sql`
-    INSERT INTO lista_fornecedor (conta, aparelho, linha, capacidade, cores, baterias, margem_lucro, tipo_lucro, valor_fornecedor, fornecedor_id, observacao)
-    VALUES (${conta}, ${body.aparelho}, ${body.linha}, ${body.capacidade}, ${cores}, ${baterias}, ${margem}, ${tipoLucro}, ${valorFornecedor}, ${fornecedorId}, ${body.observacao ?? null})
-    RETURNING id, aparelho, linha, capacidade, cores, baterias, margem_lucro, tipo_lucro, valor_fornecedor, fornecedor_id, observacao, updated_at
+    INSERT INTO lista_fornecedor (conta, aparelho, linha, capacidade, cores, baterias, margem_lucro, tipo_lucro, valor_fornecedor, fornecedor_id, observacao, tipo)
+    VALUES (${conta}, ${body.aparelho}, ${body.linha}, ${body.capacidade}, ${cores}, ${baterias}, ${margem}, ${tipoLucro}, ${valorFornecedor}, ${fornecedorId}, ${body.observacao ?? null}, ${tipo})
+    RETURNING id, aparelho, linha, capacidade, cores, baterias, margem_lucro, tipo_lucro, valor_fornecedor, fornecedor_id, observacao, updated_at, tipo
   `;
   return NextResponse.json(rowToItem(rows[0] as DbRow), { status: 201 });
 }
@@ -80,6 +92,7 @@ export async function PUT(req: NextRequest) {
   const tipoLucro = body.tipoLucro === 'fixo' ? 'fixo' : 'percentual';
   const valorFornecedor = Number(body.valorFornecedor) || 0;
   const fornecedorId = body.fornecedorId ? Number(body.fornecedorId) : null;
+  const tipo = body.tipo === 'NOVO' ? 'NOVO' : 'SEMINOVO';
 
   const rows = await sql`
     UPDATE lista_fornecedor SET
@@ -93,9 +106,10 @@ export async function PUT(req: NextRequest) {
       valor_fornecedor = ${valorFornecedor},
       fornecedor_id = ${fornecedorId},
       observacao = ${body.observacao ?? null},
+      tipo = ${tipo},
       updated_at = NOW()
     WHERE id = ${id}
-    RETURNING id, aparelho, linha, capacidade, cores, baterias, margem_lucro, tipo_lucro, valor_fornecedor, fornecedor_id, observacao, updated_at
+    RETURNING id, aparelho, linha, capacidade, cores, baterias, margem_lucro, tipo_lucro, valor_fornecedor, fornecedor_id, observacao, updated_at, tipo
   `;
   return NextResponse.json(rowToItem(rows[0] as DbRow));
 }

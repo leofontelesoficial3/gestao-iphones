@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { ItemListaFornecedor, TipoLucro, Fornecedor } from '@/types';
+import { ItemListaFornecedor, TipoLucro, Fornecedor, TipoListaItem } from '@/types';
 import {
   getListaFornecedor, addItemListaFornecedor, updateItemListaFornecedor, deleteItemListaFornecedor,
   getFornecedores, getCompilacaoLista, marcarCompilacaoLista,
@@ -349,8 +349,17 @@ function parseListaCompleta(texto: string): ParsedItem[] {
 
 // ────────────────────────────────────────────────────────────────
 
-export default function ListaFornecedorPage() {
+interface ListaFornecedorPageProps {
+  tipo?: TipoListaItem;
+}
+
+export default function ListaFornecedorPage({ tipo = 'SEMINOVO' }: ListaFornecedorPageProps) {
   const { isAdmin } = useAuth();
+  const ehNovo = tipo === 'NOVO';
+  const titulo = ehNovo ? '✨ Lista de Fornecedor — Novos' : '📋 Lista do Fornecedor';
+  const subtitulo = ehNovo
+    ? 'Aparelhos novos disponíveis no fornecedor.'
+    : 'Catálogo de aparelhos disponíveis no fornecedor (segundo estoque) com margem de lucro desejada.';
   const [itens, setItens] = useState<ItemListaFornecedor[]>([]);
   const [fornecedores, setFornecedores] = useState<Fornecedor[]>([]);
   const [editandoId, setEditandoId] = useState<number | null>(null);
@@ -389,14 +398,14 @@ export default function ListaFornecedorPage() {
 
   const load = useCallback(async () => {
     const [lista, fs, comp] = await Promise.all([
-      getListaFornecedor(),
+      getListaFornecedor(tipo),
       getFornecedores(),
       getCompilacaoLista(),
     ]);
     setItens(lista);
     setFornecedores(fs);
     setCompilacaoAt(comp.at);
-  }, []);
+  }, [tipo]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -440,6 +449,7 @@ export default function ListaFornecedorPage() {
         margemLucro: form.margemLucro,
         fornecedorId: form.fornecedorId,
         observacao: form.observacao || undefined,
+        tipo,
       };
       if (editandoId) {
         await updateItemListaFornecedor(editandoId, payload);
@@ -532,6 +542,7 @@ export default function ListaFornecedorPage() {
           margemLucro: margemUsada,
           fornecedorId: importFornecedorId ? Number(importFornecedorId) : undefined,
           observacao: undefined,
+          tipo,
         });
       }
       await marcarCompilacaoLista();
@@ -706,10 +717,8 @@ export default function ListaFornecedorPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">📋 Lista do Fornecedor</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Catálogo de aparelhos disponíveis no fornecedor (segundo estoque) com margem de lucro desejada.
-          </p>
+          <h1 className="text-2xl font-bold text-gray-800">{titulo}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{subtitulo}</p>
           <p className="text-xs text-gray-400 mt-1">
             🕒 Última compilação: <span className="font-semibold text-gray-600">{formatarCompilacao(compilacaoAt)}</span>
           </p>

@@ -61,6 +61,7 @@ export interface TemaConta {
 }
 
 export type TipoLucro = 'percentual' | 'fixo';
+export type TipoListaItem = 'NOVO' | 'SEMINOVO';
 
 export interface ItemListaFornecedor {
   id: number;
@@ -80,6 +81,8 @@ export interface ItemListaFornecedor {
   observacao?: string;
   /** Última atualização do item (timestamp ISO) */
   updatedAt?: string;
+  /** Tipo do produto: NOVO ou SEMINOVO (default SEMINOVO) */
+  tipo?: TipoListaItem;
 }
 
 export interface Stats {
