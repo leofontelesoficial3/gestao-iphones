@@ -13,9 +13,14 @@ interface DbRow {
   valor_fornecedor: string | number | null;
   fornecedor_id: number | null;
   observacao: string | null;
+  updated_at: string | Date | null;
 }
 
 function rowToItem(r: DbRow) {
+  let updatedAt: string | undefined = undefined;
+  if (r.updated_at) {
+    updatedAt = r.updated_at instanceof Date ? r.updated_at.toISOString() : String(r.updated_at);
+  }
   return {
     id: Number(r.id),
     aparelho: r.aparelho,
@@ -28,6 +33,7 @@ function rowToItem(r: DbRow) {
     margemLucro: r.margem_lucro !== null && r.margem_lucro !== undefined ? Number(r.margem_lucro) : 0,
     fornecedorId: r.fornecedor_id ? Number(r.fornecedor_id) : undefined,
     observacao: r.observacao || undefined,
+    updatedAt,
   };
 }
 
@@ -35,7 +41,7 @@ export async function GET(req: NextRequest) {
   const sql = getDb();
   const conta = req.nextUrl.searchParams.get('conta') || 'default';
   const rows = await sql`
-    SELECT id, aparelho, linha, capacidade, cores, baterias, margem_lucro, tipo_lucro, valor_fornecedor, fornecedor_id, observacao
+    SELECT id, aparelho, linha, capacidade, cores, baterias, margem_lucro, tipo_lucro, valor_fornecedor, fornecedor_id, observacao, updated_at
     FROM lista_fornecedor
     WHERE conta = ${conta}
     ORDER BY id DESC
@@ -57,7 +63,7 @@ export async function POST(req: NextRequest) {
   const rows = await sql`
     INSERT INTO lista_fornecedor (conta, aparelho, linha, capacidade, cores, baterias, margem_lucro, tipo_lucro, valor_fornecedor, fornecedor_id, observacao)
     VALUES (${conta}, ${body.aparelho}, ${body.linha}, ${body.capacidade}, ${cores}, ${baterias}, ${margem}, ${tipoLucro}, ${valorFornecedor}, ${fornecedorId}, ${body.observacao ?? null})
-    RETURNING id, aparelho, linha, capacidade, cores, baterias, margem_lucro, tipo_lucro, valor_fornecedor, fornecedor_id, observacao
+    RETURNING id, aparelho, linha, capacidade, cores, baterias, margem_lucro, tipo_lucro, valor_fornecedor, fornecedor_id, observacao, updated_at
   `;
   return NextResponse.json(rowToItem(rows[0] as DbRow), { status: 201 });
 }
@@ -89,7 +95,7 @@ export async function PUT(req: NextRequest) {
       observacao = ${body.observacao ?? null},
       updated_at = NOW()
     WHERE id = ${id}
-    RETURNING id, aparelho, linha, capacidade, cores, baterias, margem_lucro, tipo_lucro, valor_fornecedor, fornecedor_id, observacao
+    RETURNING id, aparelho, linha, capacidade, cores, baterias, margem_lucro, tipo_lucro, valor_fornecedor, fornecedor_id, observacao, updated_at
   `;
   return NextResponse.json(rowToItem(rows[0] as DbRow));
 }

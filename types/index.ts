@@ -78,6 +78,8 @@ export interface ItemListaFornecedor {
   /** Vínculo opcional com cadastro de fornecedor */
   fornecedorId?: number;
   observacao?: string;
+  /** Última atualização do item (timestamp ISO) */
+  updatedAt?: string;
 }
 
 export interface Stats {

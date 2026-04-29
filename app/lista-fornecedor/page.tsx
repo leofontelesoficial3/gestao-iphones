@@ -508,28 +508,13 @@ export default function ListaFornecedorPage() {
     }
     setImportando(true);
     try {
-      // Se o fornecedor selecionado já tem itens, atualiza (substitui) a lista anterior
+      // Se o fornecedor selecionado já tem itens, sempre apaga a lista anterior
+      // antes de cadastrar a nova (atualização automática, sem perguntar)
       if (importFornecedorId) {
         const fornecedorIdNum = Number(importFornecedorId);
         const existentes = itens.filter(i => i.fornecedorId === fornecedorIdNum);
-        if (existentes.length > 0) {
-          const f = fornecedores.find(x => x.id === fornecedorIdNum);
-          const nome = f?.nome ?? 'este fornecedor';
-          const confirma = confirm(
-            `🔄 Atualizar lista de "${nome}"?\n\n` +
-            `Já existem ${existentes.length} item(ns) cadastrados deste fornecedor. ` +
-            `A lista atual será SUBSTITUÍDA pela nova (${validItems.length} item(ns)).\n\n` +
-            `OK = atualizar (apaga antigos e cadastra os novos)\n` +
-            `Cancelar = não importar nada`
-          );
-          if (!confirma) {
-            setImportando(false);
-            return;
-          }
-          // Apaga os existentes vinculados a esse fornecedor
-          for (const item of existentes) {
-            await deleteItemListaFornecedor(item.id);
-          }
+        for (const item of existentes) {
+          await deleteItemListaFornecedor(item.id);
         }
       }
 
@@ -579,6 +564,26 @@ export default function ListaFornecedorPage() {
         .filter((entry): entry is [number, Fornecedor] => entry[1] !== undefined),
     ).values(),
   );
+
+  // Última atualização por fornecedor: MAX(updatedAt) entre os itens daquele fornecedor
+  const ultimaAtualizacaoPorFornecedor: Record<number, string> = {};
+  for (const item of itens) {
+    if (!item.fornecedorId || !item.updatedAt) continue;
+    const atual = ultimaAtualizacaoPorFornecedor[item.fornecedorId];
+    if (!atual || item.updatedAt > atual) {
+      ultimaAtualizacaoPorFornecedor[item.fornecedorId] = item.updatedAt;
+    }
+  }
+
+  const formatarAtualizacao = (iso: string | undefined): string => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleString('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+      timeZone: 'America/Sao_Paulo',
+    });
+  };
   const grupos = agruparItens(itensFiltrados);
 
   // Helpers
@@ -977,17 +982,23 @@ export default function ListaFornecedorPage() {
                 {fornecedoresEmUso.map(f => {
                   const total = itens.filter(i => i.fornecedorId === f.id).length;
                   const sel = filtroFornecedorId === f.id;
+                  const ultimaAt = formatarAtualizacao(ultimaAtualizacaoPorFornecedor[f.id]);
                   return (
                     <button
                       key={f.id}
                       onClick={() => { setFiltroFornecedorId(f.id); setFiltroAparelho(''); }}
-                      className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex flex-col items-start gap-0.5 ${
                         sel
                           ? 'bg-orange-600 text-white'
                           : 'bg-white border border-orange-200 text-orange-700 hover:bg-orange-50'
                       }`}
                     >
-                      {f.nome} ({total})
+                      <span>{f.nome} ({total})</span>
+                      {ultimaAt && (
+                        <span className={`text-[9px] font-normal ${sel ? 'text-orange-100' : 'text-gray-400'}`}>
+                          🕒 {ultimaAt} BRT
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -1356,7 +1367,7 @@ export default function ListaFornecedorPage() {
                     if (total === 0) return null;
                     return (
                       <div className="mt-2 px-3 py-2 rounded-lg bg-yellow-50 border border-yellow-200 text-[11px] text-yellow-800">
-                        ⚠ Este fornecedor já tem <strong>{total} item(ns)</strong>. Ao importar, a lista será <strong>substituída</strong> pela nova.
+                        ⚠ Este fornecedor já tem <strong>{total} item(ns)</strong>. Ao importar, a lista será <strong>substituída automaticamente</strong> pela nova.
                       </div>
                     );
                   })()}
