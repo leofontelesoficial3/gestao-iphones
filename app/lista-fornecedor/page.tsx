@@ -49,6 +49,66 @@ function calcularLucro(valorFornecedor: number, tipoLucro: TipoLucro, margemLucr
   return (valorFornecedor * margemLucro) / 100;
 }
 
+// ──────────── Agrupamento por aparelho + linha + capacidade ────────────
+
+interface GrupoItens {
+  chave: string;
+  aparelho: string;
+  linha: string;
+  capacidade: string;
+  itens: ItemListaFornecedor[];
+  cores: string[];
+  baterias: string[]; // união de todas
+  precoMin: number;
+  precoMax: number;
+}
+
+const ORDEM_LINHA: Record<string, number> = {
+  'PRO MAX': 1, 'PRO': 2, 'PLUS': 3, 'AIR': 4, 'NORMAL': 5, 'MINI': 6, 'SE': 7,
+};
+
+function agruparItens(itens: ItemListaFornecedor[]): GrupoItens[] {
+  const map = new Map<string, GrupoItens>();
+  for (const item of itens) {
+    const chave = `${item.aparelho}|${item.linha}|${item.capacidade}`;
+    let g = map.get(chave);
+    if (!g) {
+      g = {
+        chave,
+        aparelho: item.aparelho,
+        linha: item.linha,
+        capacidade: item.capacidade,
+        itens: [],
+        cores: [],
+        baterias: [],
+        precoMin: Infinity,
+        precoMax: 0,
+      };
+      map.set(chave, g);
+    }
+    g.itens.push(item);
+    item.cores.forEach(c => { if (!g!.cores.includes(c)) g!.cores.push(c); });
+    item.baterias.forEach(b => { if (!g!.baterias.includes(b)) g!.baterias.push(b); });
+    if (item.valorFornecedor > 0) {
+      g.precoMin = Math.min(g.precoMin, item.valorFornecedor);
+      g.precoMax = Math.max(g.precoMax, item.valorFornecedor);
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    const na = parseInt(a.aparelho.replace(/\D/g, '')) || 0;
+    const nb = parseInt(b.aparelho.replace(/\D/g, '')) || 0;
+    if (na !== nb) return nb - na; // 17 antes do 11
+    if (a.linha !== b.linha) return (ORDEM_LINHA[a.linha] ?? 99) - (ORDEM_LINHA[b.linha] ?? 99);
+    const ca = parseInt(a.capacidade) || 0;
+    const cb = parseInt(b.capacidade) || 0;
+    return ca - cb;
+  });
+}
+
+function ordenarBaterias(bats: string[]): string[] {
+  return [...bats].sort((a, b) => parseInt(a) - parseInt(b));
+}
+
 // Limpa telefone para WhatsApp: retorna apenas dígitos com 55 na frente
 function whatsappUrl(telefone: string, texto: string): string {
   const digits = telefone.replace(/\D/g, '');
@@ -289,6 +349,12 @@ export default function ListaFornecedorPage() {
   const [erro, setErro] = useState('');
   const [filtroAparelho, setFiltroAparelho] = useState('');
   const [compilacaoAt, setCompilacaoAt] = useState<string | null>(null);
+  // Cor selecionada por grupo (para filtrar baterias dentro do card)
+  const [coresSelecionadas, setCoresSelecionadas] = useState<Record<string, string | null>>({});
+
+  const selecionarCor = (chave: string, cor: string | null) => {
+    setCoresSelecionadas(prev => ({ ...prev, [chave]: cor }));
+  };
 
   // Importador
   const [showImport, setShowImport] = useState(false);
@@ -453,6 +519,7 @@ export default function ListaFornecedorPage() {
     ? itens.filter(i => i.aparelho === filtroAparelho)
     : itens;
   const aparelhosDisponiveis = Array.from(new Set(itens.map(i => i.aparelho)));
+  const grupos = agruparItens(itensFiltrados);
 
   // Helpers
   const fornecedorDoItem = (item: ItemListaFornecedor) =>
@@ -478,10 +545,59 @@ export default function ListaFornecedorPage() {
     window.open(whatsappUrl(f.telefone, texto), '_blank');
   };
 
+  // WhatsApp baseado no grupo (com cor selecionada ou geral)
+  const enviarWhatsAppGrupo = (grupo: GrupoItens, corSelecionada: string | null) => {
+    const item = corSelecionada
+      ? grupo.itens.find(it => it.cores.includes(corSelecionada)) ?? grupo.itens[0]
+      : grupo.itens[0];
+
+    const f = fornecedorDoItem(item);
+    if (!f || !f.telefone) {
+      alert('Este item não tem fornecedor com telefone cadastrado.');
+      return;
+    }
+    const total = item.valorFornecedor + calcularLucro(item.valorFornecedor, item.tipoLucro, item.margemLucro);
+    const baterias = corSelecionada ? item.baterias : grupo.baterias;
+    const cores = corSelecionada ? [corSelecionada] : grupo.cores;
+    const texto = [
+      `Olá, ${f.nome}!`,
+      `Tenho interesse no produto:`,
+      ``,
+      `📱 *${grupo.aparelho} ${grupo.linha}* — ${grupo.capacidade}`,
+      cores.length ? `${corSelecionada ? 'Cor' : 'Cores disponíveis'}: ${cores.join(', ')}` : '',
+      baterias.length ? `🔋 Bateria: ${ordenarBaterias(baterias).join(', ')}` : '',
+      item.valorFornecedor > 0 ? `\nValor: ${fmtMoeda(item.valorFornecedor)}` : '',
+      item.valorFornecedor > 0 ? `Preço sugerido de venda: ${fmtMoeda(total)}` : '',
+    ].filter(Boolean).join('\n');
+    window.open(whatsappUrl(f.telefone, texto), '_blank');
+  };
+
+  // Excluir baseado no grupo (cor específica ou todas)
+  const handleDeleteGrupo = async (grupo: GrupoItens, corSelecionada: string | null) => {
+    if (corSelecionada) {
+      const item = grupo.itens.find(it => it.cores.includes(corSelecionada));
+      if (!item) return;
+      if (!confirm(`Remover apenas a cor ${corSelecionada} de "${grupo.aparelho} ${grupo.linha} ${grupo.capacidade}"?`)) return;
+      await deleteItemListaFornecedor(item.id);
+    } else {
+      const n = grupo.itens.length;
+      if (!confirm(`Remover TODAS as ${n} variações de "${grupo.aparelho} ${grupo.linha} ${grupo.capacidade}"?`)) return;
+      for (const item of grupo.itens) {
+        await deleteItemListaFornecedor(item.id);
+      }
+    }
+    selecionarCor(grupo.chave, null);
+    await load();
+  };
+
   const formatarCompilacao = (at: string | null): string => {
     if (!at) return 'Nenhuma compilação ainda';
     const d = new Date(at);
-    return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    return d.toLocaleString('pt-BR', {
+      dateStyle: 'short',
+      timeStyle: 'short',
+      timeZone: 'America/Sao_Paulo', // BRT (GMT-3)
+    }) + ' (BRT)';
   };
 
   return (
@@ -766,7 +882,7 @@ export default function ListaFornecedorPage() {
         </div>
       )}
 
-      {/* Listagem */}
+      {/* Listagem agrupada por aparelho+linha+capacidade */}
       {itens.length === 0 ? (
         <div className="bg-white rounded-2xl shadow p-10 text-center">
           <div className="text-5xl mb-3">📋</div>
@@ -777,98 +893,164 @@ export default function ListaFornecedorPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {itensFiltrados.map(item => {
-            const fornecedor = fornecedorDoItem(item);
+          {grupos.map(grupo => {
+            const corSelecionada = coresSelecionadas[grupo.chave] ?? null;
+            const itensVisiveis = corSelecionada
+              ? grupo.itens.filter(it => it.cores.includes(corSelecionada))
+              : grupo.itens;
+            const bateriasVisiveis = ordenarBaterias(
+              Array.from(new Set(itensVisiveis.flatMap(it => it.baterias))),
+            );
+            const itemAtivo = itensVisiveis[0] ?? grupo.itens[0];
+            const fornecedor = fornecedorDoItem(itemAtivo);
+            const margemBadge =
+              itemAtivo.tipoLucro === 'fixo'
+                ? `+${fmtMoeda(itemAtivo.margemLucro)}`
+                : `+${itemAtivo.margemLucro}%`;
+            const lucroAtivo = calcularLucro(itemAtivo.valorFornecedor, itemAtivo.tipoLucro, itemAtivo.margemLucro);
+            const totalAtivo = itemAtivo.valorFornecedor + lucroAtivo;
+
             return (
-              <div key={item.id} className="bg-white rounded-2xl shadow p-4 space-y-3">
+              <div key={grupo.chave} className="bg-white rounded-2xl shadow p-4 space-y-3">
+                {/* Cabeçalho */}
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
-                    <p className="font-extrabold text-gray-800 truncate">
-                      {item.aparelho} <span className="font-normal text-gray-500">{item.linha}</span>
+                    <p className="font-extrabold text-gray-800 text-base">
+                      {grupo.aparelho} <span className="font-normal text-gray-500">{grupo.linha}</span>
                     </p>
-                    <p className="text-sm text-gray-500">{item.capacidade}</p>
+                    <p className="text-sm text-gray-500">{grupo.capacidade}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">
+                      {grupo.itens.length} variação(ões) · {grupo.cores.length} cor(es)
+                    </p>
                   </div>
                   <span
                     className="px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0"
                     style={{ background: 'var(--brand-primary-light)', color: 'var(--brand-primary-dark)' }}
                   >
-                    {item.tipoLucro === 'fixo' ? `+${fmtMoeda(item.margemLucro)}` : `+${item.margemLucro}%`}
+                    {margemBadge}
                   </span>
                 </div>
 
                 {/* Fornecedor */}
                 {fornecedor && (
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5 flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-[10px] text-orange-700 uppercase tracking-wide font-semibold">Fornecedor</p>
-                      <p className="text-sm font-bold text-gray-800 truncate">🚚 {fornecedor.nome}</p>
-                      {fornecedor.telefone && (
-                        <p className="text-[11px] text-gray-500 truncate">{fornecedor.telefone}</p>
-                      )}
-                    </div>
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-2.5">
+                    <p className="text-[10px] text-orange-700 uppercase tracking-wide font-semibold">Fornecedor</p>
+                    <p className="text-sm font-bold text-gray-800 truncate">🚚 {fornecedor.nome}</p>
                     {fornecedor.telefone && (
-                      <button
-                        onClick={() => enviarWhatsAppFornecedor(item)}
-                        className="flex-shrink-0 px-3 py-1.5 rounded-lg text-white text-xs font-bold flex items-center gap-1"
-                        style={{ background: '#25D366' }}
-                        title="Pedir pelo WhatsApp"
-                      >
-                        💬 Pedir
-                      </button>
+                      <p className="text-[11px] text-gray-500 truncate">{fornecedor.telefone}</p>
                     )}
                   </div>
                 )}
 
-                {/* Valores */}
-                {item.valorFornecedor > 0 && (
+                {/* Preço — range quando sem cor, exato quando cor selecionada */}
+                {grupo.precoMin !== Infinity && (
                   <div className="bg-gray-50 rounded-lg p-2.5 text-xs space-y-1">
-                    <div className="flex justify-between text-gray-500">
-                      <span>Custo fornecedor</span>
-                      <span className="font-semibold">{fmtMoeda(item.valorFornecedor)}</span>
-                    </div>
-                    <div className="flex justify-between text-green-700">
-                      <span>+ Lucro</span>
-                      <span className="font-semibold">+{fmtMoeda(calcularLucro(item.valorFornecedor, item.tipoLucro, item.margemLucro))}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-800 font-bold pt-1 border-t border-gray-200">
-                      <span>Preço sugerido</span>
-                      <span>{fmtMoeda(item.valorFornecedor + calcularLucro(item.valorFornecedor, item.tipoLucro, item.margemLucro))}</span>
-                    </div>
+                    {corSelecionada ? (
+                      <>
+                        <div className="flex justify-between text-gray-500">
+                          <span>Custo {corSelecionada}</span>
+                          <span className="font-semibold">{fmtMoeda(itemAtivo.valorFornecedor)}</span>
+                        </div>
+                        <div className="flex justify-between text-green-700">
+                          <span>+ Lucro</span>
+                          <span className="font-semibold">+{fmtMoeda(lucroAtivo)}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-800 font-bold pt-1 border-t border-gray-200">
+                          <span>Preço sugerido</span>
+                          <span>{fmtMoeda(totalAtivo)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex justify-between text-gray-700">
+                        <span>Faixa de custo</span>
+                        <span className="font-bold">
+                          {grupo.precoMin === grupo.precoMax
+                            ? fmtMoeda(grupo.precoMin)
+                            : `${fmtMoeda(grupo.precoMin)} – ${fmtMoeda(grupo.precoMax)}`}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 
+                {/* Cores (chips clicáveis para filtrar baterias) */}
                 <div>
-                  <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Cores</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">
+                      Cores · clique para filtrar baterias
+                    </p>
+                    {corSelecionada && (
+                      <button
+                        onClick={() => selecionarCor(grupo.chave, null)}
+                        className="text-[10px] text-blue-600 hover:underline font-semibold"
+                      >
+                        ✕ Limpar filtro
+                      </button>
+                    )}
+                  </div>
                   <div className="flex flex-wrap gap-1">
-                    {item.cores.map(c => (
-                      <span key={c} className="px-2 py-0.5 rounded-full text-[11px] font-semibold border border-gray-200" style={{ background: corSuave(c) }}>{c}</span>
-                    ))}
+                    {grupo.cores.map(c => {
+                      const sel = c === corSelecionada;
+                      return (
+                        <button
+                          key={c}
+                          onClick={() => selecionarCor(grupo.chave, sel ? null : c)}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border-2 transition-all ${
+                            sel
+                              ? 'border-blue-600 bg-blue-100 text-blue-800 ring-2 ring-blue-200'
+                              : 'border-gray-200 text-gray-700 hover:border-gray-400'
+                          }`}
+                          style={!sel ? { background: corSuave(c) } : {}}
+                        >
+                          {sel && '✓ '}{c}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                {item.baterias.length > 0 && (
+                {/* Baterias (filtradas pela cor selecionada, se houver) */}
+                {bateriasVisiveis.length > 0 && (
                   <div>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Bateria</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">
+                      Bateria{corSelecionada ? ` · ${corSelecionada}` : ' · todas'}
+                    </p>
                     <div className="flex flex-wrap gap-1">
-                      {item.baterias.map(b => (
-                        <span key={b} className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-50 text-green-700 border border-green-200">🔋 {b}</span>
+                      {bateriasVisiveis.map(b => (
+                        <span
+                          key={b}
+                          className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-50 text-green-700 border border-green-200"
+                        >
+                          🔋 {b}
+                        </span>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {item.observacao && <p className="text-xs text-gray-500 italic">📝 {item.observacao}</p>}
+                {itemAtivo.observacao && (
+                  <p className="text-xs text-gray-500 italic">📝 {itemAtivo.observacao}</p>
+                )}
 
+                {/* Ações: WhatsApp · Editar · Excluir */}
                 <div className="flex gap-2 pt-1">
                   <button
-                    onClick={() => handleEdit(item)}
-                    className="flex-1 py-1.5 text-xs bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-700 font-semibold"
+                    onClick={() => enviarWhatsAppGrupo(grupo, corSelecionada)}
+                    className="flex-1 py-1.5 text-xs rounded-lg font-bold text-white flex items-center justify-center gap-1"
+                    style={{ background: '#25D366' }}
+                    title="Pedir pelo WhatsApp do fornecedor"
+                  >
+                    💬 Pedir no WhatsApp
+                  </button>
+                  <button
+                    onClick={() => handleEdit(itemAtivo)}
+                    className="px-3 py-1.5 text-xs bg-blue-50 hover:bg-blue-100 rounded-lg text-blue-700 font-semibold"
                   >
                     Editar
                   </button>
                   <button
-                    onClick={() => handleDelete(item.id)}
-                    className="flex-1 py-1.5 text-xs bg-red-50 hover:bg-red-100 rounded-lg text-red-600 font-semibold"
+                    onClick={() => handleDeleteGrupo(grupo, corSelecionada)}
+                    className="px-3 py-1.5 text-xs bg-red-50 hover:bg-red-100 rounded-lg text-red-600 font-semibold"
                   >
                     Excluir
                   </button>
