@@ -60,6 +60,8 @@ export interface TemaConta {
   whatsapp: string | null;
 }
 
+export type TipoLucro = 'percentual' | 'fixo';
+
 export interface ItemListaFornecedor {
   id: number;
   aparelho: string;
@@ -67,6 +69,11 @@ export interface ItemListaFornecedor {
   capacidade: string;
   cores: string[];
   baterias: string[];
+  /** Valor cobrado pelo fornecedor (base do cálculo do lucro) */
+  valorFornecedor: number;
+  /** Tipo de lucro: 'percentual' (em %) ou 'fixo' (em R$) */
+  tipoLucro: TipoLucro;
+  /** Valor — interpretado como % do valorFornecedor (se percentual) ou R$ fixo (se fixo) */
   margemLucro: number;
   observacao?: string;
 }

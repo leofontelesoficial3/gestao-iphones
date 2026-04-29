@@ -1,9 +1,13 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
-import { ItemListaFornecedor } from '@/types';
+import { ItemListaFornecedor, TipoLucro } from '@/types';
 import { getListaFornecedor, addItemListaFornecedor, updateItemListaFornecedor, deleteItemListaFornecedor } from '@/lib/storage';
 import { useAuth } from '@/components/AuthProvider';
 import { corSuave } from '@/lib/cores';
+import { mascaraMoedaDigitada, parseCentavos } from '@/lib/format';
+
+const fmtMoeda = (v: number) =>
+  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const APARELHOS = ['IPHONE 11','IPHONE 12','IPHONE 13','IPHONE 14','IPHONE 15','IPHONE 16','IPHONE 17','IPHONE SE'];
 const LINHAS = ['NORMAL','PLUS','PRO','PRO MAX','AIR','MINI'];
@@ -17,6 +21,8 @@ interface FormState {
   capacidade: string;
   cores: string[];
   baterias: string[];
+  valorFornecedor: number;
+  tipoLucro: TipoLucro;
   margemLucro: number;
   observacao: string;
 }
@@ -27,9 +33,16 @@ const empty = (): FormState => ({
   capacidade: '128 GB',
   cores: [],
   baterias: [],
+  valorFornecedor: 0,
+  tipoLucro: 'percentual',
   margemLucro: 15,
   observacao: '',
 });
+
+function calcularLucro(valorFornecedor: number, tipoLucro: TipoLucro, margemLucro: number) {
+  if (tipoLucro === 'fixo') return margemLucro;
+  return (valorFornecedor * margemLucro) / 100;
+}
 
 export default function ListaFornecedorPage() {
   const { isAdmin } = useAuth();
@@ -38,6 +51,8 @@ export default function ListaFornecedorPage() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<FormState>(empty());
   const [bateriaInput, setBateriaInput] = useState('');
+  const [lucroFixoTxt, setLucroFixoTxt] = useState('');
+  const [valorFornecedorTxt, setValorFornecedorTxt] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const [filtroAparelho, setFiltroAparelho] = useState('');
@@ -84,6 +99,8 @@ export default function ListaFornecedorPage() {
         capacidade: form.capacidade,
         cores: form.cores,
         baterias: form.baterias,
+        valorFornecedor: form.valorFornecedor,
+        tipoLucro: form.tipoLucro,
         margemLucro: form.margemLucro,
         observacao: form.observacao || undefined,
       };
@@ -94,6 +111,8 @@ export default function ListaFornecedorPage() {
       }
       await load();
       setForm(empty());
+      setValorFornecedorTxt('');
+      setLucroFixoTxt('');
       setEditandoId(null);
       setShowForm(false);
     } catch {
@@ -110,9 +129,19 @@ export default function ListaFornecedorPage() {
       capacidade: item.capacidade,
       cores: [...item.cores],
       baterias: [...item.baterias],
+      valorFornecedor: item.valorFornecedor,
+      tipoLucro: item.tipoLucro,
       margemLucro: item.margemLucro,
       observacao: item.observacao || '',
     });
+    setValorFornecedorTxt(
+      item.valorFornecedor > 0 ? mascaraMoedaDigitada(String(Math.round(item.valorFornecedor * 100))) : ''
+    );
+    setLucroFixoTxt(
+      item.tipoLucro === 'fixo' && item.margemLucro > 0
+        ? mascaraMoedaDigitada(String(Math.round(item.margemLucro * 100)))
+        : ''
+    );
     setEditandoId(item.id);
     setShowForm(true);
   };
@@ -139,7 +168,7 @@ export default function ListaFornecedorPage() {
           </p>
         </div>
         <button
-          onClick={() => { setEditandoId(null); setForm(empty()); setShowForm(s => !s); }}
+          onClick={() => { setEditandoId(null); setForm(empty()); setValorFornecedorTxt(''); setLucroFixoTxt(''); setShowForm(s => !s); }}
           className="px-4 py-2 rounded-lg text-white font-semibold text-sm"
           style={{ background: 'var(--brand-primary)' }}
         >
@@ -246,9 +275,53 @@ export default function ListaFornecedorPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="label">Margem de Lucro Desejada (%)</label>
+          {/* Valor do Fornecedor */}
+          <div>
+            <label className="label">Valor cobrado pelo Fornecedor (R$)</label>
+            <input
+              type="text"
+              inputMode="numeric"
+              className="input !font-bold"
+              value={valorFornecedorTxt}
+              placeholder="R$ 0,00"
+              onChange={e => {
+                const txt = mascaraMoedaDigitada(e.target.value);
+                setValorFornecedorTxt(txt);
+                set('valorFornecedor', parseCentavos(txt));
+              }}
+            />
+            <p className="text-[10px] text-gray-400 mt-1">Base sobre a qual o lucro será calculado.</p>
+          </div>
+
+          {/* Tipo de lucro */}
+          <div>
+            <label className="label">Lucro Desejado</label>
+            <div className="flex gap-2 mb-2">
+              <button
+                type="button"
+                onClick={() => set('tipoLucro', 'percentual')}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold border-2 ${
+                  form.tipoLucro === 'percentual'
+                    ? 'border-blue-600 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 text-gray-500 hover:border-gray-400'
+                }`}
+              >
+                % Percentual
+              </button>
+              <button
+                type="button"
+                onClick={() => set('tipoLucro', 'fixo')}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold border-2 ${
+                  form.tipoLucro === 'fixo'
+                    ? 'border-blue-600 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 text-gray-500 hover:border-gray-400'
+                }`}
+              >
+                R$ Valor fixo
+              </button>
+            </div>
+
+            {form.tipoLucro === 'percentual' ? (
               <input
                 type="number"
                 step="0.5"
@@ -257,17 +330,55 @@ export default function ListaFornecedorPage() {
                 onChange={e => set('margemLucro', Number(e.target.value))}
                 placeholder="15"
               />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="label">Observação <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
+            ) : (
               <input
                 type="text"
-                className="input"
-                value={form.observacao}
-                onChange={e => set('observacao', e.target.value)}
-                placeholder="Ex: lacrado, anatel, etc."
+                inputMode="numeric"
+                className="input !font-bold"
+                value={lucroFixoTxt}
+                placeholder="R$ 0,00"
+                onChange={e => {
+                  const txt = mascaraMoedaDigitada(e.target.value);
+                  setLucroFixoTxt(txt);
+                  set('margemLucro', parseCentavos(txt));
+                }}
               />
-            </div>
+            )}
+
+            {/* Resumo do cálculo */}
+            {form.valorFornecedor > 0 && form.margemLucro > 0 && (
+              <div className="mt-2 p-3 rounded-lg bg-green-50 border border-green-200 text-sm">
+                <div className="flex justify-between text-gray-600">
+                  <span>Custo fornecedor</span>
+                  <span className="font-semibold">{fmtMoeda(form.valorFornecedor)}</span>
+                </div>
+                <div className="flex justify-between text-green-700">
+                  <span>
+                    + Lucro {form.tipoLucro === 'percentual' ? `(${form.margemLucro}%)` : '(fixo)'}
+                  </span>
+                  <span className="font-semibold">
+                    +{fmtMoeda(calcularLucro(form.valorFornecedor, form.tipoLucro, form.margemLucro))}
+                  </span>
+                </div>
+                <div className="flex justify-between text-gray-800 font-bold pt-1 border-t border-green-300 mt-1">
+                  <span>Preço de venda sugerido</span>
+                  <span>
+                    {fmtMoeda(form.valorFornecedor + calcularLucro(form.valorFornecedor, form.tipoLucro, form.margemLucro))}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="label">Observação <span className="text-gray-400 text-xs font-normal">(opcional)</span></label>
+            <input
+              type="text"
+              className="input"
+              value={form.observacao}
+              onChange={e => set('observacao', e.target.value)}
+              placeholder="Ex: lacrado, anatel, etc."
+            />
           </div>
 
           {erro && <p className="text-sm text-red-600">{erro}</p>}
@@ -275,7 +386,7 @@ export default function ListaFornecedorPage() {
           <div className="flex gap-2 justify-end">
             <button
               type="button"
-              onClick={() => { setShowForm(false); setEditandoId(null); setForm(empty()); }}
+              onClick={() => { setShowForm(false); setEditandoId(null); setForm(empty()); setValorFornecedorTxt(''); setLucroFixoTxt(''); }}
               className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 text-sm"
             >
               Cancelar
@@ -345,9 +456,31 @@ export default function ListaFornecedorPage() {
                   className="px-2.5 py-1 rounded-full text-xs font-bold flex-shrink-0"
                   style={{ background: 'var(--brand-primary-light)', color: 'var(--brand-primary-dark)' }}
                 >
-                  +{item.margemLucro}%
+                  {item.tipoLucro === 'fixo' ? `+${fmtMoeda(item.margemLucro)}` : `+${item.margemLucro}%`}
                 </span>
               </div>
+
+              {/* Valores */}
+              {item.valorFornecedor > 0 && (
+                <div className="bg-gray-50 rounded-lg p-2.5 text-xs space-y-1">
+                  <div className="flex justify-between text-gray-500">
+                    <span>Custo fornecedor</span>
+                    <span className="font-semibold">{fmtMoeda(item.valorFornecedor)}</span>
+                  </div>
+                  <div className="flex justify-between text-green-700">
+                    <span>+ Lucro</span>
+                    <span className="font-semibold">
+                      +{fmtMoeda(calcularLucro(item.valorFornecedor, item.tipoLucro, item.margemLucro))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-gray-800 font-bold pt-1 border-t border-gray-200">
+                    <span>Preço sugerido</span>
+                    <span>
+                      {fmtMoeda(item.valorFornecedor + calcularLucro(item.valorFornecedor, item.tipoLucro, item.margemLucro))}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <div>
                 <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Cores</p>

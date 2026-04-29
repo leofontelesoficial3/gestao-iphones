@@ -104,6 +104,11 @@ export async function GET() {
       updated_at TIMESTAMP DEFAULT NOW()
     )
   `;
+  // Suporta lucro por valor fixo em R$ — coluna margem_lucro precisa de mais dígitos
+  await sql`ALTER TABLE lista_fornecedor ALTER COLUMN margem_lucro TYPE DECIMAL(10,2)`;
+  await sql`ALTER TABLE lista_fornecedor ADD COLUMN IF NOT EXISTS tipo_lucro VARCHAR(20) DEFAULT 'percentual'`;
+  // Valor de fornecedor — base sobre a qual o lucro é calculado
+  await sql`ALTER TABLE lista_fornecedor ADD COLUMN IF NOT EXISTS valor_fornecedor DECIMAL(10,2) DEFAULT 0`;
 
   // Tema da conta (estilo da página)
   await sql`ALTER TABLE contas ADD COLUMN IF NOT EXISTS tema_cor VARCHAR(20) DEFAULT 'azul'`;
