@@ -12,6 +12,7 @@ const allLinks = [
   { href: '/simulacao', label: 'Simulação', icon: '💳', adminOnly: true },
   { href: '/despesas', label: 'Despesas', icon: '📋', adminOnly: true },
   { href: '/fornecedores', label: 'Fornecedores', icon: '🚚', adminOnly: true },
+  { href: '/lista-fornecedor', label: 'Lista Fornec.', icon: '📋', adminOnly: true },
   { href: '/vendedores', label: 'Equipe', icon: '👥', adminOnly: true },
   { href: '/estilo', label: 'Estilo', icon: '🎨', adminOnly: true },
 ];

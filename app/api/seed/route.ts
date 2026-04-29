@@ -88,6 +88,23 @@ export async function GET() {
   // Preço público para a loja online (opcional, definido pelo admin)
   await sql`ALTER TABLE produtos ADD COLUMN IF NOT EXISTS preco_publico DECIMAL(10,2)`;
 
+  // Lista de fornecedor — segundo "estoque" com aparelhos disponíveis no fornecedor
+  await sql`
+    CREATE TABLE IF NOT EXISTS lista_fornecedor (
+      id SERIAL PRIMARY KEY,
+      conta VARCHAR(100) NOT NULL DEFAULT 'default',
+      aparelho VARCHAR(50) NOT NULL,
+      linha VARCHAR(30) NOT NULL,
+      capacidade VARCHAR(20) NOT NULL,
+      cores TEXT,
+      baterias TEXT,
+      margem_lucro DECIMAL(5,2) DEFAULT 0,
+      observacao TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    )
+  `;
+
   // Tema da conta (estilo da página)
   await sql`ALTER TABLE contas ADD COLUMN IF NOT EXISTS tema_cor VARCHAR(20) DEFAULT 'azul'`;
   await sql`ALTER TABLE contas ADD COLUMN IF NOT EXISTS tema_logo TEXT`;

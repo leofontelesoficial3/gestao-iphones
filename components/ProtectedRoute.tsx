@@ -3,7 +3,7 @@ import { useAuth } from './AuthProvider';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 
-const ADMIN_ROUTES = ['/', '/vendas', '/vendedores', '/fornecedores', '/simulacao', '/despesas'];
+const ADMIN_ROUTES = ['/', '/vendas', '/vendedores', '/fornecedores', '/lista-fornecedor', '/simulacao', '/despesas', '/estilo'];
 const PUBLIC_ROUTES = ['/login', '/registro', '/site'];
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {

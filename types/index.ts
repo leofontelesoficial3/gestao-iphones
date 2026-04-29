@@ -60,6 +60,17 @@ export interface TemaConta {
   whatsapp: string | null;
 }
 
+export interface ItemListaFornecedor {
+  id: number;
+  aparelho: string;
+  linha: string;
+  capacidade: string;
+  cores: string[];
+  baterias: string[];
+  margemLucro: number;
+  observacao?: string;
+}
+
 export interface Stats {
   totalFaturamento: number;
   totalLucro: number;

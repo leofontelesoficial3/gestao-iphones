@@ -1,4 +1,4 @@
-import { Produto, Stats, Fornecedor, TemaConta, TemaCor } from '@/types';
+import { Produto, Stats, Fornecedor, TemaConta, TemaCor, ItemListaFornecedor } from '@/types';
 import { getLoggedUser } from './auth';
 
 // ── Tema da conta ─────────────────────────────────────────────
@@ -57,6 +57,37 @@ export async function getContas(): Promise<ContaInfo[]> {
   const res = await fetch('/api/contas');
   if (!res.ok) return [];
   return res.json();
+}
+
+// ── Lista de Fornecedor (segundo estoque) ─────────────────────
+export async function getListaFornecedor(): Promise<ItemListaFornecedor[]> {
+  const res = await fetch(`/api/lista-fornecedor?conta=${getConta()}`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function addItemListaFornecedor(item: Omit<ItemListaFornecedor, 'id'>): Promise<ItemListaFornecedor> {
+  const res = await fetch('/api/lista-fornecedor', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...item, conta: getConta() }),
+  });
+  if (!res.ok) throw new Error('Falha ao salvar item');
+  return res.json();
+}
+
+export async function updateItemListaFornecedor(id: number, item: Omit<ItemListaFornecedor, 'id'>): Promise<ItemListaFornecedor> {
+  const res = await fetch('/api/lista-fornecedor', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, ...item }),
+  });
+  if (!res.ok) throw new Error('Falha ao atualizar item');
+  return res.json();
+}
+
+export async function deleteItemListaFornecedor(id: number): Promise<void> {
+  await fetch(`/api/lista-fornecedor?id=${id}`, { method: 'DELETE' });
 }
 
 // ── Fornecedores ──────────────────────────────────────────────
