@@ -501,16 +501,41 @@ export default function ListaFornecedorPage() {
   };
 
   const importarTudo = async () => {
-    if (parsedItens.filter(p => p.ok).length === 0) {
+    const validItems = parsedItens.filter(p => p.ok);
+    if (validItems.length === 0) {
       alert('Nada para importar. Cole uma lista e clique em "Analisar".');
       return;
     }
     setImportando(true);
     try {
+      // Se o fornecedor selecionado já tem itens, atualiza (substitui) a lista anterior
+      if (importFornecedorId) {
+        const fornecedorIdNum = Number(importFornecedorId);
+        const existentes = itens.filter(i => i.fornecedorId === fornecedorIdNum);
+        if (existentes.length > 0) {
+          const f = fornecedores.find(x => x.id === fornecedorIdNum);
+          const nome = f?.nome ?? 'este fornecedor';
+          const confirma = confirm(
+            `🔄 Atualizar lista de "${nome}"?\n\n` +
+            `Já existem ${existentes.length} item(ns) cadastrados deste fornecedor. ` +
+            `A lista atual será SUBSTITUÍDA pela nova (${validItems.length} item(ns)).\n\n` +
+            `OK = atualizar (apaga antigos e cadastra os novos)\n` +
+            `Cancelar = não importar nada`
+          );
+          if (!confirma) {
+            setImportando(false);
+            return;
+          }
+          // Apaga os existentes vinculados a esse fornecedor
+          for (const item of existentes) {
+            await deleteItemListaFornecedor(item.id);
+          }
+        }
+      }
+
       const margemFixo = parseCentavos(importMargemFixoTxt);
       const margemUsada = importTipoLucro === 'fixo' ? margemFixo : importMargem;
-      for (const p of parsedItens) {
-        if (!p.ok) continue;
+      for (const p of validItems) {
         await addItemListaFornecedor({
           aparelho: p.aparelho,
           linha: p.linha,
@@ -1326,6 +1351,15 @@ export default function ListaFornecedorPage() {
                       <option key={f.id} value={f.id}>{f.nome}</option>
                     ))}
                   </select>
+                  {importFornecedorId !== '' && (() => {
+                    const total = itens.filter(i => i.fornecedorId === Number(importFornecedorId)).length;
+                    if (total === 0) return null;
+                    return (
+                      <div className="mt-2 px-3 py-2 rounded-lg bg-yellow-50 border border-yellow-200 text-[11px] text-yellow-800">
+                        ⚠ Este fornecedor já tem <strong>{total} item(ns)</strong>. Ao importar, a lista será <strong>substituída</strong> pela nova.
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
